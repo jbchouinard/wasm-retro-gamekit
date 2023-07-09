@@ -179,12 +179,18 @@ impl<T> Grid<T> {
     }
     pub fn iter_from_points<I>(&self, itp: I) -> impl Iterator<Item = &T>
     where
-        I: Iterator<Item = Point>,
+        I: IntoIterator<Item = Point>,
     {
-        GridPointsIterator { grid: self, itp }
+        GridPointsIterator {
+            grid: self,
+            itp: itp.into_iter(),
+        }
     }
     pub fn iter(&self) -> impl Iterator<Item = &T> {
         self.iter_from_points(self.iter_points())
+    }
+    pub fn cells(&self) -> *const T {
+        self.cells.as_ptr()
     }
 }
 

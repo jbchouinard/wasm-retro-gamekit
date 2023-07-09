@@ -80,6 +80,15 @@ impl Universe {
         grid.reshape(width, height);
         Self::from_grid(grid)
     }
+    pub fn width(&self) -> u32 {
+        self.grid.width()
+    }
+    pub fn height(&self) -> u32 {
+        self.grid.height()
+    }
+    pub fn cells(&self) -> *const Cell {
+        self.grid.cells()
+    }
     pub fn render(&self) -> String {
         self.to_string()
     }
