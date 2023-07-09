@@ -1,8 +1,5 @@
 use std::iter::FromIterator;
 
-use wasm_bindgen::prelude::*;
-
-#[wasm_bindgen]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Point {
     pub x: i64,
@@ -106,28 +103,6 @@ pub struct Grid<T> {
     cells: Vec<T>,
 }
 
-pub struct GridPointsIterator<'a, T, I>
-where
-    I: Iterator<Item = Point>,
-{
-    grid: &'a Grid<T>,
-    itp: I,
-}
-
-impl<'a, T, I> Iterator for GridPointsIterator<'a, T, I>
-where
-    I: Iterator<Item = Point>,
-{
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.itp.next() {
-            Some(p) => Some(self.grid.get(&p)),
-            None => None,
-        }
-    }
-}
-
 impl<T> Grid<T>
 where
     T: Default + Clone,
@@ -164,6 +139,10 @@ impl<T> Grid<T> {
     pub fn get(&self, p: &Point) -> &T {
         &self.cells[self.index(p)]
     }
+    pub fn get_mut(&mut self, p: &Point) -> &mut T {
+        let idx = self.index(p);
+        &mut self.cells[idx]
+    }
     pub fn set(&mut self, p: &Point, v: T) -> T {
         let idx = self.index(p);
         std::mem::replace(&mut self.cells[idx], v)
@@ -177,17 +156,8 @@ impl<T> Grid<T> {
     pub fn iter_points(&self) -> impl Iterator<Item = Point> {
         PointRange::new(0, self.width as i64, 0, self.height as i64)
     }
-    pub fn iter_from_points<I>(&self, itp: I) -> impl Iterator<Item = &T>
-    where
-        I: IntoIterator<Item = Point>,
-    {
-        GridPointsIterator {
-            grid: self,
-            itp: itp.into_iter(),
-        }
-    }
     pub fn iter(&self) -> impl Iterator<Item = &T> {
-        self.iter_from_points(self.iter_points())
+        self.iter_points().map(move |p| self.get(&p))
     }
     pub fn cells(&self) -> *const T {
         self.cells.as_ptr()
@@ -242,12 +212,8 @@ mod test {
         let mut grid: Grid<u32> = vec![0, 1, 2, 3, 4, 5].into_iter().collect();
         grid.reshape(3, 2);
 
-        let pv_empty: Vec<Point> = vec![];
-        let mut grid_iter_empty = grid.iter_from_points(pv_empty.into_iter());
-        assert!(grid_iter_empty.next().is_none());
-
         let pv: Vec<Point> = vec![Point::new(0, 0), Point::new(1, 1)];
-        let vals: Vec<u32> = grid.iter_from_points(pv.into_iter()).cloned().collect();
+        let vals: Vec<u32> = pv.iter().map(|p| grid.get(p)).cloned().collect();
         assert_eq!(vals, vec![0, 4]);
     }
 

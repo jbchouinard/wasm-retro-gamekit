@@ -1,12 +1,12 @@
+mod canvas;
 mod grid;
-mod utils;
+pub mod js;
+mod life;
 
 use rand::Rng;
-use wasm_bindgen::prelude::*;
 
 use grid::{Grid, Point};
 
-#[wasm_bindgen]
 #[repr(u8)]
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub enum Cell {
@@ -28,7 +28,6 @@ impl std::fmt::Display for Cell {
     }
 }
 
-#[wasm_bindgen]
 pub struct Universe {
     grid: Grid<Cell>,
 }
@@ -63,7 +62,6 @@ impl Universe {
     }
 }
 
-#[wasm_bindgen]
 impl Universe {
     pub fn new(width: u32, height: u32, density: u8) -> Self {
         let mut rng = rand::thread_rng();

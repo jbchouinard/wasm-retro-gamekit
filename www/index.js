@@ -1,76 +1,30 @@
-import { memory } from "wasm-game-of-life/wasm_game_of_life_bg";
-import { Universe, Cell } from "wasm-game-of-life";
+import { GameOfLife, init_once } from "wasm-game-of-life";
 
-const CELL_SIZE = 5 // px
-const GRID_COLOR = "#CCCCCC";
-const DEAD_COLOR = "#FFFFFF";
-const ALIVE_COLOR = "#000000";
+init_once();
 
-const universe = Universe.new(250, 250, 50);
-const width = universe.width();
-const height = universe.height();
 
-const canvas = document.getElementById("game-of-life-canvas")
-canvas.height = (CELL_SIZE + 1) * height + 1;
-canvas.width = (CELL_SIZE + 1) * width + 1;
+const GAME_WIDTH = 400;
+const GAME_HEIGHT = 300;
+const LIFE_DENSITY = 0.5;
+const PIXEL_SCALE = 3;
+const IMAGE_WIDTH = GAME_WIDTH * PIXEL_SCALE;
+const IMAGE_HEIGHT = GAME_HEIGHT * PIXEL_SCALE;
+
+const gameOfLife = GameOfLife.conway(GAME_WIDTH, GAME_HEIGHT, LIFE_DENSITY);
+
+
+const canvas = document.getElementById("game-of-life-canvas");
+canvas.height = IMAGE_HEIGHT;
+canvas.width = IMAGE_WIDTH;
 
 const ctx = canvas.getContext("2d");
 
 
-function drawGrid() {
-    ctx.beginPath();
-    ctx.strokeStyle = GRID_COLOR;
-
-    // Vertical lines.
-    for (let i = 0; i <= width; i++) {
-        ctx.moveTo(i * (CELL_SIZE + 1) + 1, 0);
-        ctx.lineTo(i * (CELL_SIZE + 1) + 1, (CELL_SIZE + 1) * height + 1);
-    }
-
-    // Horizontal lines.
-    for (let j = 0; j <= height; j++) {
-        ctx.moveTo(0, j * (CELL_SIZE + 1) + 1);
-        ctx.lineTo((CELL_SIZE + 1) * width + 1, j * (CELL_SIZE + 1) + 1);
-    }
-
-    ctx.stroke();
-}
-
-const getIndex = (row, column) => {
-    return row * width + column;
-};
-
-
-function drawCells() {
-    const cellsPtr = universe.cells();
-    const cells = new Uint8Array(memory.buffer, cellsPtr, width * height);
-
-    ctx.beginPath();
-
-    for (let row = 0; row < height; row++) {
-        for (let col = 0; col < width; col++) {
-            const idx = getIndex(row, col);
-
-            ctx.fillStyle = cells[idx] === Cell.Dead
-                ? DEAD_COLOR
-                : ALIVE_COLOR;
-
-            ctx.fillRect(
-                col * (CELL_SIZE + 1) + 1,
-                row * (CELL_SIZE + 1) + 1,
-                CELL_SIZE,
-                CELL_SIZE
-            );
-        }
-    }
-    ctx.stroke();
-}
-
 function renderLoop() {
-    drawGrid();
-    drawCells();
-    universe.tick();
+    const imageData = ctx.createImageData(IMAGE_WIDTH, IMAGE_HEIGHT);
+    gameOfLife.paint(imageData.data, PIXEL_SCALE);
+    ctx.putImageData(imageData, 0, 0);
+    gameOfLife.tick();
 }
 
-
-const timer = setInterval(renderLoop, 200);
+setInterval(renderLoop, 200);
