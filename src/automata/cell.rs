@@ -1,10 +1,11 @@
 use rand::Rng;
 
-use crate::canvas::{Color, HasColor};
+use crate::display::Color;
 
-pub trait Cell: Default + Clone + HasColor + Sized {
+pub trait Cell: Default + Clone + Sized {
     fn tick(&mut self, neighbors: &[Self]);
     fn randomize(&mut self, density: f32);
+    fn color(&self) -> Color;
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -12,15 +13,6 @@ pub enum ConwayCell {
     #[default]
     Dead = 0,
     Alive = 1,
-}
-
-impl HasColor for ConwayCell {
-    fn has_color(&self) -> crate::canvas::Color {
-        match self {
-            ConwayCell::Alive => Color::rgb(0, 0, 0),
-            ConwayCell::Dead => Color::rgb(255, 255, 255),
-        }
-    }
 }
 
 impl Cell for ConwayCell {
@@ -41,5 +33,12 @@ impl Cell for ConwayCell {
             true => ConwayCell::Alive,
             false => ConwayCell::Dead,
         };
+    }
+
+    fn color(&self) -> Color {
+        match self {
+            ConwayCell::Alive => Color::rgb(0, 0, 0),
+            ConwayCell::Dead => Color::rgb(255, 255, 255),
+        }
     }
 }

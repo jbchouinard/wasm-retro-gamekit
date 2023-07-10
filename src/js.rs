@@ -1,8 +1,9 @@
 use wasm_bindgen::prelude::*;
 
-use crate::life::{
-    cell::ConwayCell,
-    universe::{CellUniverse, Universe},
+use crate::{
+    automata::{cell::ConwayCell, universe::CellUniverse},
+    display::Window,
+    game::{FakeGame, Game},
 };
 
 #[wasm_bindgen]
@@ -18,23 +19,59 @@ pub fn init_once() {
 }
 
 #[wasm_bindgen]
-pub struct GameOfLife {
-    universe: Box<dyn Universe>,
+pub struct WindowHandle(Window);
+
+#[wasm_bindgen]
+impl WindowHandle {
+    pub fn new(game: &GameHandle) -> Self {
+        Self(Window::new(game.render_width(), game.render_height()))
+    }
+    pub fn set_screen_size(&mut self, width: usize, height: usize) {
+        self.0.rescale(width, height);
+    }
+    pub fn image_width(&self) -> usize {
+        self.0.image_width()
+    }
+    pub fn image_height(&self) -> usize {
+        self.0.image_height()
+    }
+    pub fn image_data(&self) -> *const u8 {
+        self.0.image_data()
+    }
+    pub fn image_data_size(&self) -> usize {
+        self.0.image_data_size()
+    }
 }
 
 #[wasm_bindgen]
-impl GameOfLife {
+pub struct GameHandle(Box<dyn Game>);
+
+#[wasm_bindgen]
+impl GameHandle {
+    pub fn render_width(&self) -> usize {
+        self.0.render_width()
+    }
+    pub fn render_height(&self) -> usize {
+        self.0.render_height()
+    }
     pub fn tick(&mut self) {
-        self.universe.tick();
+        self.0.tick()
     }
-    pub fn paint(&self, image_data: &mut [u8], scale: u32) {
-        self.universe.draw().scaled(scale).paint(image_data);
+    pub fn render(&mut self, window: &mut WindowHandle) {
+        let mut frame = window.0.new_frame();
+        self.0.render(&mut frame);
+        window.0.draw_frame(&frame);
     }
-    pub fn conway(width: u32, height: u32, density: f32) -> GameOfLife {
-        let mut universe: CellUniverse<ConwayCell> = CellUniverse::new(width, height);
-        universe.randomize(density);
-        GameOfLife {
-            universe: Box::new(universe),
-        }
-    }
+}
+
+#[wasm_bindgen]
+pub fn fake_game(width: usize, height: usize) -> GameHandle {
+    GameHandle(Box::new(FakeGame::new(width, height)))
+}
+
+#[wasm_bindgen]
+pub fn game_of_life(width: usize, height: usize, density: f32) -> GameHandle {
+    let mut universe: CellUniverse<ConwayCell> = CellUniverse::new(width, height);
+    universe.randomize(density);
+    GameHandle(Box::new(universe))
 }
