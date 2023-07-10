@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 use crate::{
     automata::{cell::ConwayCell, universe::CellUniverse},
     display::Window,
-    game::{FakeGame, Game},
+    game::Game,
 };
 
 #[wasm_bindgen]
@@ -62,11 +62,6 @@ impl GameHandle {
         self.0.render(&mut frame);
         window.0.draw_frame(&frame);
     }
-}
-
-#[wasm_bindgen]
-pub fn fake_game(width: usize, height: usize) -> GameHandle {
-    GameHandle(Box::new(FakeGame::new(width, height)))
 }
 
 #[wasm_bindgen]

@@ -1,13 +1,16 @@
 import { memory } from "wasm-game-of-life/wasm_game_of_life_bg"
-import { game_of_life, fake_game, WindowHandle, init_once } from "wasm-game-of-life";
+import { game_of_life, WindowHandle, init_once } from "wasm-game-of-life";
 
 init_once();
 
-// const gameHandle = game_of_life(200, 200, 0.5);
-const gameHandle = fake_game(200, 200);
-const windowHandle = WindowHandle.new(gameHandle);
+const countFps = true;
+const countFpsInterval = 100;
+
 const canvas = document.getElementById("game-of-life-canvas");
 const canvasContext = canvas.getContext("2d");
+
+const gameHandle = game_of_life(200, 200, 0.5);
+const windowHandle = WindowHandle.new(gameHandle);
 
 var imageWidth;
 var imageHeight;
@@ -35,8 +38,7 @@ function onWindowResize() {
 onWindowResize();
 addEventListener("resize", onWindowResize);
 
-const countFps = true;
-const countFpsInterval = 10;
+
 var countFpsTicks = 0;
 var countFpsStart = window.performance.now();
 var countFpsAvg = 0;
@@ -56,10 +58,7 @@ function renderLoop() {
             countFpsStart = now;
             countFpsTicks = 0;
         }
-        canvasContext.strokeStyle = "red";
-        canvasContext.fillStyle = "black";
-        canvasContext.strokeText(`${countFpsAvg}`, 10, 20);
-        canvasContext.fillText(`${countFpsAvg}`, 10, 20);
+        console.log(`fpsCounter: ${countFpsAvg}`)
     }
 }
 

@@ -31,16 +31,6 @@ where
     fn get_mut(&mut self, p: &V) -> &mut T {
         self.grid.get_mut(p)
     }
-    fn neighbors(&self, p: &V) -> Vec<T> {
-        let offsets = [V::new(-1, 0), V::new(1, 0), V::new(0, -1), V::new(0, 1)];
-        offsets
-            .iter()
-            .map(|x| *p + *x)
-            .map(|p| self.get(&p))
-            .cloned()
-            .collect()
-    }
-
     pub fn randomize(&mut self, density: f32) {
         for p in self.grid.iter_points() {
             let cell = self.grid.get_mut(&p);
@@ -68,7 +58,12 @@ where
 {
     fn tick(&mut self) {
         for p in self.grid.iter_points() {
-            let neighbors: Vec<T> = self.neighbors(&p);
+            let neighbors = [
+                self.get(&(p + V::new(-1, 0))).clone(),
+                self.get(&(p + V::new(1, 0))).clone(),
+                self.get(&(p + V::new(0, -1))).clone(),
+                self.get(&(p + V::new(0, 1))).clone(),
+            ];
             let cell = self.get_mut(&p);
             cell.tick(&neighbors);
         }
