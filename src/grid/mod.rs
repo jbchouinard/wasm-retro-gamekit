@@ -1,3 +1,5 @@
+pub mod hex;
+
 use std::iter::FromIterator;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -96,7 +98,7 @@ impl Iterator for VRange {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Grid<T> {
     width: usize,
     height: usize,
@@ -124,28 +126,39 @@ impl<T> Grid<T> {
         self.width = width;
         self.height = height;
     }
-    fn wrap(&self, p: &V) -> V {
+    fn wrap(&self, v: V) -> V {
         let w = self.width as i64;
         let h = self.height as i64;
         V {
-            x: (w + p.x) % w,
-            y: (h + p.y) % h,
+            x: (w + v.x) % w,
+            y: (h + v.y) % h,
         }
     }
-    fn index(&self, p: &V) -> usize {
-        let wp = self.wrap(p);
+    fn index(&self, v: V) -> usize {
+        let wp = self.wrap(v);
         (wp.y * self.width as i64 + wp.x) as usize
     }
-    pub fn get(&self, p: &V) -> &T {
-        &self.cells[self.index(p)]
+    pub fn get(&self, v: V) -> &T {
+        &self.cells[self.index(v)]
     }
-    pub fn get_mut(&mut self, p: &V) -> &mut T {
-        let idx = self.index(p);
+    pub fn get_mut(&mut self, v: V) -> &mut T {
+        let idx = self.index(v);
         &mut self.cells[idx]
     }
-    pub fn set(&mut self, p: &V, v: T) -> T {
-        let idx = self.index(p);
-        std::mem::replace(&mut self.cells[idx], v)
+    pub fn mut_cells(&mut self) -> &mut Vec<T> {
+        &mut self.cells
+    }
+    pub fn get_neighbors(&self, v: V) -> [&T; 4] {
+        [
+            self.get(v + V::new(0, -1)),
+            self.get(v + V::new(-1, 0)),
+            self.get(v + V::new(1, 0)),
+            self.get(v + V::new(0, 1)),
+        ]
+    }
+    pub fn replace(&mut self, v: V, value: T) -> T {
+        let idx = self.index(v);
+        std::mem::replace(&mut self.cells[idx], value)
     }
     pub fn width(&self) -> usize {
         self.width
@@ -153,7 +166,7 @@ impl<T> Grid<T> {
     pub fn height(&self) -> usize {
         self.height
     }
-    pub fn iter_points(&self) -> impl Iterator<Item = V> {
+    pub fn iter_v(&self) -> impl Iterator<Item = V> {
         VRange::new(0, self.width as i64, 0, self.height as i64)
     }
 }
@@ -187,18 +200,18 @@ mod test {
     #[test]
     fn test_grid_get_set() {
         let mut grid: Grid<u32> = Grid::new(10, 10);
-        let p = V::new(1, 2);
-        let wp = V::new(11, 12);
-        assert_eq!(*grid.get(&p), 0);
-        assert_eq!(grid.set(&p, 222), 0);
-        assert_eq!(*grid.get(&wp), 222);
+        let v = V::new(1, 2);
+        let wv = V::new(11, 12);
+        assert_eq!(*grid.get(v), 0);
+        assert_eq!(grid.replace(v, 222), 0);
+        assert_eq!(*grid.get(wv), 222);
     }
 
     #[test]
     fn test_grid_reshape() {
         let mut grid: Grid<u32> = vec![0, 1, 2, 3, 4, 5].into_iter().collect();
         grid.reshape(3, 2);
-        assert_eq!(*grid.get(&V::new(0, 1)), 3);
+        assert_eq!(*grid.get(V::new(0, 1)), 3);
     }
 
     #[test]
@@ -207,7 +220,7 @@ mod test {
         grid.reshape(3, 2);
 
         let pv: Vec<V> = vec![V::new(0, 0), V::new(1, 1)];
-        let vals: Vec<u32> = pv.iter().map(|p| grid.get(p)).cloned().collect();
+        let vals: Vec<u32> = pv.into_iter().map(|v| grid.get(v)).cloned().collect();
         assert_eq!(vals, vec![0, 4]);
     }
 

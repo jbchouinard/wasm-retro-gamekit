@@ -10,11 +10,14 @@ pub struct Color {
 
 impl Color {
     pub fn rgb(red: u8, green: u8, blue: u8) -> Self {
+        Self::rgba(red, green, blue, 255)
+    }
+    pub fn rgba(red: u8, green: u8, blue: u8, alpha: u8) -> Self {
         Self {
             red,
             green,
             blue,
-            alpha: 255,
+            alpha,
         }
     }
 }
@@ -28,6 +31,21 @@ pub struct Frame {
 impl Frame {
     pub fn pixels(&mut self) -> &mut Grid<Color> {
         &mut self.pixels
+    }
+    pub fn width(&self) -> usize {
+        self.width
+    }
+    pub fn height(&self) -> usize {
+        self.height
+    }
+    pub fn set_pixel(&mut self, v: V, color: Color) -> bool {
+        if v.x >= self.width as i64 || v.y >= self.height as i64 {
+            false
+        } else {
+            let px = self.pixels.get_mut(v);
+            *px = color;
+            true
+        }
     }
 }
 
@@ -104,9 +122,9 @@ impl Window {
         if frame.width != self.frame_width || frame.height != self.frame_height {
             panic!("trying to write frame with wrong dimensions");
         }
-        for p in frame.pixels.iter_points() {
-            let color = frame.pixels.get(&p);
-            let scaled_base_v = p * self.scale as i64;
+        for v in frame.pixels.iter_v() {
+            let color = frame.pixels.get(v);
+            let scaled_base_v = v * self.scale as i64;
             for x in 0..self.scale {
                 for y in 0..self.scale {
                     let scaled_v = scaled_base_v + V::new(x as i64, y as i64);

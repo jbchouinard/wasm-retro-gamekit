@@ -1,11 +1,11 @@
 use rand::Rng;
 
-use crate::display::Color;
+use crate::graphics::PColor;
 
 pub trait Cell: Default + Clone + Sized {
     fn tick(&mut self, neighbors: &[Self]);
     fn randomize(&mut self, density: f32);
-    fn color(&self) -> Color;
+    fn color(&self) -> PColor;
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -35,10 +35,10 @@ impl Cell for ConwayCell {
         };
     }
 
-    fn color(&self) -> Color {
+    fn color(&self) -> PColor {
         match self {
-            ConwayCell::Alive => Color::rgb(0, 0, 0),
-            ConwayCell::Dead => Color::rgb(255, 255, 255),
+            ConwayCell::Alive => PColor::C1,
+            ConwayCell::Dead => PColor::T,
         }
     }
 }

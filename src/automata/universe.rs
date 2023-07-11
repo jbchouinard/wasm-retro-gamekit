@@ -1,15 +1,12 @@
 use super::cell::Cell;
-use crate::{
-    display::Frame,
-    game::Game,
-    grid::{Grid, V},
-};
+use crate::grid::{Grid, V};
 
-pub struct CellUniverse<T: Cell> {
+#[derive(Default)]
+pub struct Universe<T: Cell> {
     grid: Grid<T>,
 }
 
-impl<T> CellUniverse<T>
+impl<T> Universe<T>
 where
     T: Cell + Default + Clone,
 {
@@ -21,63 +18,36 @@ where
     }
 }
 
-impl<T> CellUniverse<T>
+impl<T> Universe<T>
 where
     T: Cell,
 {
-    fn get(&self, p: &V) -> &T {
-        self.grid.get(p)
+    fn get(&self, v: V) -> &T {
+        self.grid.get(v)
     }
-    fn get_mut(&mut self, p: &V) -> &mut T {
-        self.grid.get_mut(p)
+    fn get_mut(&mut self, v: V) -> &mut T {
+        self.grid.get_mut(v)
     }
     pub fn randomize(&mut self, density: f32) {
-        for p in self.grid.iter_points() {
-            let cell = self.grid.get_mut(&p);
+        for v in self.grid.iter_v() {
+            let cell = self.grid.get_mut(v);
             cell.randomize(density);
         }
     }
-}
-
-pub fn draw_grid<C>(grid: &Grid<C>, frame: &mut Frame)
-where
-    C: Cell,
-{
-    let pixels = frame.pixels();
-    assert_eq!(grid.height(), pixels.height());
-    assert_eq!(grid.width(), pixels.width());
-
-    for v in grid.iter_points() {
-        pixels.set(&v, grid.get(&v).color());
+    pub fn grid(&self) -> &Grid<T> {
+        &self.grid
     }
-}
-
-impl<T> Game for CellUniverse<T>
-where
-    T: Cell,
-{
-    fn tick(&mut self) {
-        for p in self.grid.iter_points() {
+    pub fn tick(&mut self) -> bool {
+        for v in self.grid.iter_v() {
             let neighbors = [
-                self.get(&(p + V::new(-1, 0))).clone(),
-                self.get(&(p + V::new(1, 0))).clone(),
-                self.get(&(p + V::new(0, -1))).clone(),
-                self.get(&(p + V::new(0, 1))).clone(),
+                self.get(v + V::new(-1, 0)).clone(),
+                self.get(v + V::new(1, 0)).clone(),
+                self.get(v + V::new(0, -1)).clone(),
+                self.get(v + V::new(0, 1)).clone(),
             ];
-            let cell = self.get_mut(&p);
+            let cell = self.get_mut(v);
             cell.tick(&neighbors);
         }
-    }
-
-    fn render(&self, frame: &mut crate::display::Frame) {
-        draw_grid(&self.grid, frame);
-    }
-
-    fn render_height(&self) -> usize {
-        self.grid.height()
-    }
-
-    fn render_width(&self) -> usize {
-        self.grid.width()
+        true
     }
 }
