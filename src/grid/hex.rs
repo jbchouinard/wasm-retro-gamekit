@@ -4,23 +4,23 @@
 use std::iter::FromIterator;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub struct Hv {
+pub struct HexVector {
     col: i64,
     row: i64,
 }
 
-impl Hv {
+impl HexVector {
     pub fn new(col: i64, row: i64) -> Self {
         assert!((col + row) % 2 == 0, "invalid double-width hex vector");
         Self { col, row }
     }
 }
 
-impl std::ops::Add for Hv {
+impl std::ops::Add for HexVector {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        Hv::new(self.col + rhs.col, self.row + rhs.row)
+        HexVector::new(self.col + rhs.col, self.row + rhs.row)
     }
 }
 
@@ -44,13 +44,13 @@ impl HvIter {
 }
 
 impl Iterator for HvIter {
-    type Item = Hv;
+    type Item = HexVector;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.row >= self.height {
             return None;
         }
-        let next_hv = Hv::new(self.col, self.row);
+        let next_hv = HexVector::new(self.col, self.row);
 
         self.col += 2;
         if self.col >= (2 * self.width) {
@@ -84,14 +84,14 @@ where
 }
 
 impl<T> HexGrid<T> {
-    fn wrap(&self, hv: Hv) -> Hv {
+    fn wrap(&self, hv: HexVector) -> HexVector {
         let w = self.width as i64;
         let h = self.height as i64;
         let col = (hv.col + (2 * w)) % (2 * w);
         let row = (hv.row + h) % h;
-        Hv::new(col, row)
+        HexVector::new(col, row)
     }
-    fn index(&self, hv: Hv) -> usize {
+    fn index(&self, hv: HexVector) -> usize {
         let hv = self.wrap(hv);
         let col = hv.col as usize;
         let row = hv.row as usize;
@@ -106,24 +106,24 @@ impl<T> HexGrid<T> {
         self.width = width;
         self.height = height;
     }
-    pub fn get(&self, hv: Hv) -> &T {
+    pub fn get(&self, hv: HexVector) -> &T {
         &self.cells[self.index(hv)]
     }
-    pub fn get_mut(&mut self, hv: Hv) -> &mut T {
+    pub fn get_mut(&mut self, hv: HexVector) -> &mut T {
         let idx = self.index(hv);
         &mut self.cells[idx]
     }
-    pub fn get_neighbors(&self, hv: Hv) -> [&T; 6] {
+    pub fn get_neighbors(&self, hv: HexVector) -> [&T; 6] {
         [
-            self.get(hv + Hv::new(-1, -1)),
-            self.get(hv + Hv::new(1, -1)),
-            self.get(hv + Hv::new(-2, 0)),
-            self.get(hv + Hv::new(2, 0)),
-            self.get(hv + Hv::new(-1, 1)),
-            self.get(hv + Hv::new(1, 1)),
+            self.get(hv + HexVector::new(-1, -1)),
+            self.get(hv + HexVector::new(1, -1)),
+            self.get(hv + HexVector::new(-2, 0)),
+            self.get(hv + HexVector::new(2, 0)),
+            self.get(hv + HexVector::new(-1, 1)),
+            self.get(hv + HexVector::new(1, 1)),
         ]
     }
-    pub fn iter_hv(&self) -> impl Iterator<Item = Hv> {
+    pub fn iter_hv(&self) -> impl Iterator<Item = HexVector> {
         HvIter::new(self.width, self.height)
     }
 }
@@ -148,20 +148,25 @@ mod test {
         let mut grid: HexGrid<u8> = [0, 1, 2, 3].iter().cloned().collect();
         grid.reshape(2, 2);
 
-        assert_eq!(*grid.get(Hv::new(0, 0)), 0);
-        assert_eq!(*grid.get(Hv::new(2, 0)), 1);
-        assert_eq!(*grid.get(Hv::new(1, 1)), 2);
-        assert_eq!(*grid.get(Hv::new(3, 1)), 3);
+        assert_eq!(*grid.get(HexVector::new(0, 0)), 0);
+        assert_eq!(*grid.get(HexVector::new(2, 0)), 1);
+        assert_eq!(*grid.get(HexVector::new(1, 1)), 2);
+        assert_eq!(*grid.get(HexVector::new(3, 1)), 3);
     }
 
     #[test]
     fn test_grid_iter_hv() {
         let grid: HexGrid<u8> = HexGrid::new(2, 2);
-        let hvs: Vec<Hv> = grid.iter_hv().collect();
+        let hvs: Vec<HexVector> = grid.iter_hv().collect();
 
         assert_eq!(
             hvs,
-            vec![Hv::new(0, 0), Hv::new(2, 0), Hv::new(1, 1), Hv::new(3, 1)]
+            vec![
+                HexVector::new(0, 0),
+                HexVector::new(2, 0),
+                HexVector::new(1, 1),
+                HexVector::new(3, 1)
+            ]
         )
     }
 }

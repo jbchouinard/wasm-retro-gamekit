@@ -4,7 +4,7 @@ use crate::{
     display::Color,
     game::Painter,
     graphics::{Layer, PColor, Palette, PaletteRef, Scene, Sprite, SpriteImage, SpriteImageRef},
-    grid::V,
+    grid::Vector,
 };
 
 use super::{cell::Cell, universe::Universe};
@@ -30,7 +30,7 @@ where
     fn make_cell_image(&self, color: PColor) -> SpriteImageRef {
         Rc::new(SpriteImage::new(vec![color; 4], 2, 2))
     }
-    fn paint_cell(&self, vc: V, state: &Universe<T>, scene: &mut Scene) {
+    fn paint_cell(&self, vc: Vector, state: &Universe<T>, scene: &mut Scene) {
         let grid = state.grid();
         let cell = grid.get(vc);
         let image = self.make_cell_image(cell.color());

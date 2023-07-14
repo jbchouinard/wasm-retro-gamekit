@@ -1,10 +1,13 @@
+#![allow(non_snake_case)]
+use std::{cell::RefCell, rc::Rc};
+
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    automata::conway_game_of_life,
-    display::Window,
-    game::{EngineResponse, Game},
-    input::InputState,
+    demos::{automata::conway_game_of_life, bouncybox::bouncy_box_game},
+    display::{Window, WindowResizeListener},
+    event::{Event, EventQueue, EventSource, EventType, KeyEvent, WindowResizeEvent},
+    game::{GameRunner, Response},
 };
 
 #[wasm_bindgen]
@@ -20,81 +23,132 @@ pub fn init_once() {
 }
 
 #[wasm_bindgen]
-pub struct WindowHandle(Window);
+pub struct WindowHandle(Rc<RefCell<Window>>);
 
 #[wasm_bindgen]
 impl WindowHandle {
-    fn new(game: &GameHandle) -> Self {
-        Self(Window::new(game.0.render_width(), game.0.render_height()))
-    }
-    pub fn set_screen_size(&mut self, width: usize, height: usize) {
-        self.0.rescale(width, height);
-    }
     pub fn image_width(&self) -> u32 {
-        self.0.image_width() as u32
+        self.0.borrow().image_width() as u32
     }
     pub fn image_height(&self) -> u32 {
-        self.0.image_height() as u32
+        self.0.borrow().image_height() as u32
     }
-    pub fn image_data(&self) -> *const u8 {
-        self.0.image_data()
+    pub fn image_data_ptr(&self) -> *const u8 {
+        self.0.borrow().image_data()
     }
     pub fn image_data_size(&self) -> usize {
-        self.0.image_data_size()
+        self.0.borrow().image_data_size()
     }
 }
 
 #[wasm_bindgen]
-pub struct InputHandle(InputState);
+pub struct EventQueueHandle(EventQueue);
 
 #[wasm_bindgen]
-impl InputHandle {
-    pub fn key_up(&mut self, key: &str) {
-        self.0.register_key_up(key);
+impl EventQueueHandle {
+    pub fn send_key_up(
+        &mut self,
+        key: &str,
+        alt: bool,
+        ctrl: bool,
+        shift: bool,
+        meta: bool,
+    ) -> bool {
+        self.0
+            .send(Event::KeyUp(KeyEvent {
+                key: key.to_string(),
+                alt,
+                ctrl,
+                meta,
+                shift,
+            }))
+            .is_ok()
     }
-    pub fn key_down(&mut self, key: &str) {
-        self.0.register_key_down(key);
+    pub fn send_key_down(
+        &mut self,
+        key: &str,
+        alt: bool,
+        ctrl: bool,
+        shift: bool,
+        meta: bool,
+    ) -> bool {
+        self.0
+            .send(Event::KeyDown(KeyEvent {
+                key: key.to_string(),
+                alt,
+                ctrl,
+                meta,
+                shift,
+            }))
+            .is_ok()
     }
-    pub fn key_map_help(&self) -> String {
-        self.0.keymap().to_string()
+    pub fn send_window_resize(&mut self, width: u32, height: u32) -> bool {
+        self.0
+            .send(Event::WindowResize(WindowResizeEvent {
+                width: width as usize,
+                height: height as usize,
+            }))
+            .is_ok()
     }
 }
 
 #[wasm_bindgen]
-pub struct GameHandle(Box<dyn Game>);
+pub struct GameHandle {
+    game: GameRunner,
+    window: Rc<RefCell<Window>>,
+    event_queue: EventQueue,
+}
+
+impl GameHandle {
+    fn new(mut game: GameRunner) -> Self {
+        let eq = EventQueue::new(0);
+        let mut source = EventSource::new(eq.clone());
+        let window = Rc::new(RefCell::new(Window::new(
+            game.scene_width(),
+            game.scene_height(),
+        )));
+        source.add_listener(
+            &[EventType::WindowResize],
+            WindowResizeListener::new(window.clone()),
+        );
+        game.start(0.0, source);
+        Self {
+            game,
+            window,
+            event_queue: eq,
+        }
+    }
+}
 
 #[wasm_bindgen]
 impl GameHandle {
-    pub fn tick(&mut self, now: f32, input: &mut InputHandle) -> String {
-        match self.0.tick(now, &mut input.0) {
-            EngineResponse::Empty => "Empty".to_string(),
-            EngineResponse::RequestRedraw => "RequestRedraw".to_string(),
-            EngineResponse::Finished => "Finished".to_string(),
+    pub fn window(&self) -> WindowHandle {
+        WindowHandle(self.window.clone())
+    }
+    pub fn event_queue(&self) -> EventQueueHandle {
+        EventQueueHandle(self.event_queue.clone())
+    }
+    pub fn tick(&mut self, now: f32) -> String {
+        self.game.poll();
+        match self.game.tick(now, &mut self.window.borrow_mut()) {
+            Response::Empty => "Continue",
+            Response::Finished => "Finished",
+            Response::RequestRedraw => "RequestRedraw",
         }
-    }
-    pub fn render(&mut self, window: &mut WindowHandle) {
-        self.0.render(&mut window.0);
+        .to_string()
     }
 }
 
 #[wasm_bindgen]
-pub fn make_input() -> InputHandle {
-    InputHandle(InputState::new())
+pub fn GameOfLife(width: usize, height: usize, density: f32, tick_interval: f32) -> GameHandle {
+    let game = conway_game_of_life(width, height, density, tick_interval);
+    let runner = GameRunner::new(game, Some(30.0));
+    GameHandle::new(runner)
 }
 
 #[wasm_bindgen]
-pub fn make_game_window(game: &GameHandle) -> WindowHandle {
-    WindowHandle::new(game)
-}
-
-#[wasm_bindgen]
-pub fn make_game_of_life(
-    input: &mut InputHandle,
-    width: usize,
-    height: usize,
-    density: f32,
-    tick_interval: f32,
-) -> GameHandle {
-    let game = conway_game_of_life(&mut input.0, width, height, density, tick_interval);
-    GameHandle(Box::new(game))
+pub fn BouncyBox(width: usize, height: usize, cor: f32) -> GameHandle {
+    let game = bouncy_box_game(width, height, cor);
+    let runner = GameRunner::new(game, None);
+    GameHandle::new(runner)
 }

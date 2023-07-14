@@ -1,4 +1,9 @@
-use crate::grid::{Grid, V};
+use std::{cell::RefCell, rc::Rc};
+
+use crate::{
+    event::{EventListener, WindowResizeEvent},
+    grid::{Grid, Vector},
+};
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub struct Color {
@@ -38,8 +43,8 @@ impl Frame {
     pub fn height(&self) -> usize {
         self.height
     }
-    pub fn set_pixel(&mut self, v: V, color: Color) -> bool {
-        if v.x >= self.width as i64 || v.y >= self.height as i64 {
+    pub fn set_pixel(&mut self, v: Vector, color: Color) -> bool {
+        if v.x < 0 || v.x >= self.width as i64 || v.y < 0 || v.y >= self.height as i64 {
             false
         } else {
             let px = self.pixels.get_mut(v);
@@ -67,7 +72,7 @@ impl ImageData {
     pub fn data_size(&self) -> usize {
         4 * self.height * self.width
     }
-    pub fn set(&mut self, v: &V, c: Color) {
+    pub fn set(&mut self, v: &Vector, c: Color) {
         let vs = *v * 4;
         let idx = self.width * vs.y as usize + vs.x as usize;
         self.data[idx] = c.red;
@@ -112,10 +117,12 @@ impl Window {
         self.scale * self.frame_height
     }
     pub fn new_frame(&self) -> Frame {
+        let mut grid = Grid::new(self.frame_width, self.frame_height);
+        grid.nowrap();
         Frame {
             width: self.frame_width,
             height: self.frame_height,
-            pixels: Grid::new(self.frame_width, self.frame_height),
+            pixels: grid,
         }
     }
     pub fn draw_frame(&mut self, frame: &Frame) {
@@ -127,7 +134,7 @@ impl Window {
             let scaled_base_v = v * self.scale as i64;
             for x in 0..self.scale {
                 for y in 0..self.scale {
-                    let scaled_v = scaled_base_v + V::new(x as i64, y as i64);
+                    let scaled_v = scaled_base_v + Vector::new(x as i64, y as i64);
                     self.image_data.set(&scaled_v, *color);
                 }
             }
@@ -138,5 +145,21 @@ impl Window {
     }
     pub fn image_data_size(&self) -> usize {
         self.image_data.data_size()
+    }
+}
+
+#[derive(Clone)]
+pub struct WindowResizeListener(Rc<RefCell<Window>>);
+
+impl WindowResizeListener {
+    pub fn new(window: Rc<RefCell<Window>>) -> Self {
+        Self(window)
+    }
+}
+
+impl EventListener for WindowResizeListener {
+    fn on_window_resize(&mut self, event: &WindowResizeEvent) {
+        let mut window = self.0.borrow_mut();
+        window.rescale(event.width, event.height);
     }
 }

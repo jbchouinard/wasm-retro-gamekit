@@ -2,7 +2,7 @@ use std::{collections::HashMap, rc::Rc};
 
 use crate::{
     display::{Color, Frame},
-    grid::{Grid, V},
+    grid::{Grid, Vector},
 };
 
 #[derive(Copy, Clone, Debug, Default)]
@@ -31,7 +31,7 @@ impl Palette {
     }
     pub fn color(&self, pc: PColor) -> Color {
         match pc {
-            PColor::T => Color::default(),
+            PColor::T => Color::rgba(0, 0, 0, 0),
             _ => self.0[pc as usize],
         }
     }
@@ -51,13 +51,16 @@ impl SpriteImage {
         grid.reshape(width, height);
         Self { pixels: grid }
     }
+
     pub fn width(&self) -> usize {
         self.pixels.width()
     }
+
     pub fn height(&self) -> usize {
         self.pixels.height()
     }
-    pub fn get_pixel(&self, v: V) -> PColor {
+
+    pub fn get_pixel(&self, v: Vector) -> PColor {
         *self.pixels.get(v)
     }
 }
@@ -89,14 +92,14 @@ static LAYERS: [Layer; 8] = [
 ];
 
 pub struct Sprite {
-    pos: V,
+    pos: Vector,
     layer: Layer,
     image: SpriteImageRef,
     palette: PaletteRef,
 }
 
 impl Sprite {
-    pub fn new(pos: V, layer: Layer, image: SpriteImageRef, palette: PaletteRef) -> Self {
+    pub fn new(pos: Vector, layer: Layer, image: SpriteImageRef, palette: PaletteRef) -> Self {
         Self {
             pos,
             layer,
@@ -104,15 +107,19 @@ impl Sprite {
             palette,
         }
     }
-    pub fn pos(&self) -> V {
+
+    pub fn pos(&self) -> Vector {
         self.pos
     }
+
     pub fn layer(&self) -> Layer {
         self.layer
     }
+
     pub fn image(&self) -> SpriteImageRef {
         self.image.clone()
     }
+
     pub fn palette(&self) -> PaletteRef {
         self.palette.clone()
     }
@@ -138,26 +145,39 @@ impl Scene {
             sprites,
         }
     }
+
     pub fn set_bg_color(&mut self, color: Color) {
         self.bg_color = color;
     }
+
     pub fn add_sprite(&mut self, sprite: Sprite) {
         let layer = sprite.layer;
         self.sprites.get_mut(&layer).unwrap().push(sprite);
     }
+
     fn render_background(&self, frame: &mut Frame) {
         let pixels = frame.pixels().mut_cells();
         for p in pixels.iter_mut() {
             *p = self.bg_color;
         }
     }
+
     fn render_sprite(&self, sprite: &Sprite, frame: &mut Frame) {
         let vtl = sprite.pos();
         let image = sprite.image();
         let palette = sprite.palette().colors();
+
+        if vtl.x > (self.width as i64)
+            || (vtl.x + image.width() as i64) < 0
+            || vtl.y > self.height as i64
+            || (vtl.y + image.height() as i64) < 0
+        {
+            return;
+        }
+
         for y in 0..image.height() {
             for x in 0..image.width() {
-                let vs = V::new(x as i64, y as i64);
+                let vs = Vector::new(x as i64, y as i64);
                 let vf = vtl + vs;
                 let pixel = image.get_pixel(vs);
                 match pixel {
@@ -169,6 +189,7 @@ impl Scene {
             }
         }
     }
+
     pub fn render(&self, frame: &mut Frame) {
         let len = frame.pixels().mut_cells().len();
         assert_eq!(self.width, frame.width());

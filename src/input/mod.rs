@@ -1,62 +1,38 @@
-use std::collections::HashMap;
+pub mod keyboard;
+pub mod mouse;
 
-pub trait Key {
-    fn name(&self) -> String;
-    fn value(&self) -> u8;
-}
+use std::{cell::RefCell, rc::Rc};
 
-pub struct KeyMap {
-    map: HashMap<String, u8>,
-    names: HashMap<u8, String>,
-}
+use crate::event::{EventListener, EventSource, EventType, KeyEvent};
 
-impl KeyMap {
-    pub fn new() -> Self {
-        Self {
-            map: HashMap::new(),
-            names: HashMap::new(),
-        }
-    }
-    pub fn set_key_mapping<T: Key>(&mut self, key: &str, mapped: T) {
-        let n: u8 = mapped.value();
-        self.map.insert(key.to_string(), n);
-        self.names.insert(n, mapped.name());
-    }
-    pub fn get(&self, key: &str) -> Option<u8> {
-        self.map.get(key).cloned()
-    }
-}
-
-impl std::fmt::Display for KeyMap {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (key, n) in self.map.iter() {
-            let name = self.names.get(n).unwrap();
-            writeln!(f, "{}:  {}", name, key)?;
-        }
-        Ok(())
-    }
-}
+use self::keyboard::{Key, KeyMap};
 
 pub struct InputState {
     keymap: KeyMap,
-    pressed: [bool; 255],
+    key_pressed: [bool; 255],
 }
 
 impl InputState {
     pub fn new() -> Self {
         Self {
             keymap: KeyMap::new(),
-            pressed: [false; 255],
+            key_pressed: [false; 255],
         }
+    }
+    pub fn with_listener(source: &mut EventSource) -> Rc<RefCell<Self>> {
+        let state = Rc::new(RefCell::new(Self::new()));
+        let listener = InputStateListener(state.clone());
+        source.add_listener(&[EventType::KeyUp, EventType::KeyDown], listener);
+        state
     }
     pub fn register_key_up(&mut self, key: &str) {
         if let Some(x) = self.keymap.get(key) {
-            self.pressed[x as usize] = false;
+            self.key_pressed[x as usize] = false;
         }
     }
     pub fn register_key_down(&mut self, key: &str) {
         if let Some(x) = self.keymap.get(key) {
-            self.pressed[x as usize] = true;
+            self.key_pressed[x as usize] = true;
         }
     }
     pub fn keymap(&self) -> &KeyMap {
@@ -65,8 +41,30 @@ impl InputState {
     pub fn set_keymap(&mut self, keymap: KeyMap) {
         self.keymap = keymap;
     }
-    pub fn is_pressed<T: Key>(&self, key: T) -> bool {
+    pub fn is_key_pressed<T: Key>(&self, key: T) -> bool {
         let idx: u8 = key.value();
-        self.pressed[idx as usize]
+        self.key_pressed[idx as usize]
+    }
+}
+
+pub struct InputStateListener(Rc<RefCell<InputState>>);
+
+impl InputStateListener {
+    pub fn new(input: Rc<RefCell<InputState>>) -> Self {
+        Self(input)
+    }
+    pub fn listen(self, source: &mut EventSource) {
+        source.add_listener(&[EventType::KeyUp, EventType::KeyDown], self);
+    }
+}
+
+impl EventListener for InputStateListener {
+    fn on_key_down(&mut self, event: &KeyEvent) {
+        let mut input_state = self.0.borrow_mut();
+        input_state.register_key_down(&event.key);
+    }
+    fn on_key_up(&mut self, event: &KeyEvent) {
+        let mut input_state = self.0.borrow_mut();
+        input_state.register_key_up(&event.key);
     }
 }
