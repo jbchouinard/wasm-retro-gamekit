@@ -1,6 +1,6 @@
 {
-    "name": "retro-gamekit",
-    "main": "retro-gamekit.js",
+    "name": "retro-gamekit-bootstrap",
+    "main": "retro-gamekit-bootstrap.js",
     "description": "Glue code to run browser games made with wasm-retro-gamekit.",
     "version": "0.1.0",
     "dependencies": {},
