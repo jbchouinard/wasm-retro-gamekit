@@ -1,5 +1,5 @@
 //! Hex grid with double-width horizontal layout
-//! https://www.redblobgames.com/grids/hexagons/
+//! <https://www.redblobgames.com/grids/hexagons/>
 
 use std::iter::FromIterator;
 

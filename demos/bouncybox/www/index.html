@@ -3,10 +3,10 @@
 
 <head>
   <meta charset="utf-8">
-  <title>Rust/WASM Demo</title>
+  <title>wasm-retro-gamekit demo - BouncyBox</title>
   <style>
     body {
-      background-color: #222;
+      background-color: #000;
     }
 
     canvas {
@@ -14,6 +14,7 @@
       margin: auto;
       display: block;
       position: absolute;
+      outline: 0;
       top: 0;
       bottom: 0;
       left: 0;
@@ -24,7 +25,7 @@
 
 <body>
   <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
-  <canvas id="game-canvas"></canvas>
+  <canvas id="game-canvas" tabindex="1"></canvas>
   <script src="./bootstrap.js"></script>
 </body>
 

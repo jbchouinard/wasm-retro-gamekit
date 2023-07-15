@@ -1,13 +1,20 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
-use num::Zero;
+use num::{One, Zero};
 
-use crate::physics::box2d::Float;
+use crate::num::Float;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Axis {
     X,
     Y,
+}
+
+pub enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -41,6 +48,22 @@ where
     pub fn mag(&self) -> T {
         T::sqrt(self.x.powi(2) + self.y.powi(2))
     }
+
+    pub fn norm(&self) -> Self {
+        let mag = self.mag();
+        if mag == T::zero() {
+            Self::zero()
+        } else {
+            *self / mag
+        }
+    }
+
+    pub fn round(&self) -> Vec2d<i64> {
+        Vec2d {
+            x: self.x.round().to_i64().unwrap(),
+            y: self.y.round().to_i64().unwrap(),
+        }
+    }
 }
 
 impl<T> Vec2d<T>
@@ -51,6 +74,20 @@ where
         Self {
             x: T::zero(),
             y: T::zero(),
+        }
+    }
+}
+
+impl<T> Vec2d<T>
+where
+    T: One + Zero + Neg<Output = T>,
+{
+    pub fn unit(d: &Direction) -> Self {
+        match d {
+            Direction::Up => Self::new(T::zero(), -T::one()),
+            Direction::Down => Self::new(T::zero(), T::one()),
+            Direction::Left => Self::new(-T::one(), T::zero()),
+            Direction::Right => Self::new(T::one(), T::zero()),
         }
     }
 }

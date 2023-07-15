@@ -4,10 +4,12 @@ use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    demos::{automata::conway_game_of_life, bouncybox::bouncy_box_game},
     display::{Window, WindowResizeListener},
-    event::{Event, EventQueue, EventSource, EventType, KeyEvent, WindowResizeEvent},
+    event::{
+        Event, EventQueue, EventRouter, EventType, KeyEvent, MouseClickEvent, WindowResizeEvent,
+    },
     game::{GameRunner, Response},
+    vector::vec2d::Vec2d,
 };
 
 #[wasm_bindgen]
@@ -46,6 +48,13 @@ pub struct EventQueueHandle(EventQueue);
 
 #[wasm_bindgen]
 impl EventQueueHandle {
+    pub fn send_click(&mut self, x: f32, y: f32) -> bool {
+        self.0
+            .send(Event::MouseClick(MouseClickEvent {
+                pos: Vec2d::new(x, y),
+            }))
+            .is_ok()
+    }
     pub fn send_key_up(
         &mut self,
         key: &str,
@@ -100,9 +109,9 @@ pub struct GameHandle {
 }
 
 impl GameHandle {
-    fn new(mut game: GameRunner) -> Self {
+    pub fn new(mut game: GameRunner) -> Self {
         let eq = EventQueue::new(0);
-        let mut source = EventSource::new(eq.clone());
+        let mut source = EventRouter::new(eq.clone());
         let window = Rc::new(RefCell::new(Window::new(
             game.scene_width(),
             game.scene_height(),
@@ -137,18 +146,4 @@ impl GameHandle {
         }
         .to_string()
     }
-}
-
-#[wasm_bindgen]
-pub fn GameOfLife(width: usize, height: usize, density: f32, tick_interval: f32) -> GameHandle {
-    let game = conway_game_of_life(width, height, density, tick_interval);
-    let runner = GameRunner::new(game, Some(30.0));
-    GameHandle::new(runner)
-}
-
-#[wasm_bindgen]
-pub fn BouncyBox(width: usize, height: usize, cor: f32) -> GameHandle {
-    let game = bouncy_box_game(width, height, cor);
-    let runner = GameRunner::new(game, None);
-    GameHandle::new(runner)
 }

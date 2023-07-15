@@ -1,36 +1,16 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::vector::vec2d::{Axis, Vec2d as V};
+use crate::{
+    num::Float,
+    pair::Pair,
+    vector::vec2d::{Axis, Vec2d as V},
+};
 
 pub use super::identity::ObjectId;
-use super::identity::ObjectIdPair;
-
-pub trait Float: num::Float + num::FromPrimitive + num::ToPrimitive {}
-
-impl Float for f32 {}
-impl Float for f64 {}
-
-pub fn dpad_v<T>(up: bool, down: bool, left: bool, right: bool) -> V<T>
-where
-    T: Float,
-{
-    let mut x = match (left, right) {
-        (true, false) => -T::one(),
-        (false, true) => T::one(),
-        _ => T::zero(),
-    };
-    let mut y = match (up, down) {
-        (true, false) => -T::one(),
-        (false, true) => T::one(),
-        _ => T::zero(),
-    };
-    if (y != T::zero()) && (x != T::zero()) {
-        let s = T::sqrt(T::from_f32(0.5).unwrap());
-        y = y * s;
-        x = x * s;
-    }
-    V::new(x, y)
-}
+use super::{
+    identity::{Identity, IdentityKey, ObjectKey},
+    universe::{Physics, Space, Universe},
+};
 
 pub struct Mov<T> {
     pub pos: V<T>,
@@ -42,13 +22,6 @@ impl<T> Mov<T>
 where
     T: Float,
 {
-    pub fn pixel_pos(&self) -> V<i64> {
-        V::new(
-            self.pos.x.round().to_i64().unwrap(),
-            self.pos.y.round().to_i64().unwrap(),
-        )
-    }
-
     pub fn update(&mut self, delta_t: f32) {
         let delta_t: T = T::from_f32(delta_t).unwrap();
         self.vel = self.vel + self.acc * delta_t;
@@ -100,8 +73,7 @@ where
     }
 }
 
-pub trait Object<T> {
-    fn id(&self) -> &ObjectId;
+pub trait Object<T>: Identity + IdentityKey {
     fn hitbox(&self) -> &HitBox<T>;
     fn hitbox_mut(&mut self) -> &mut HitBox<T>;
 }
@@ -147,8 +119,9 @@ where
     (v_a, v_b)
 }
 
-fn collide<T>(a: &mut dyn Object<T>, b: &mut dyn Object<T>, axis: Axis, cor: T)
+fn collide<O, T>(a: &mut O, b: &mut O, axis: Axis, cor: T)
 where
+    O: Object<T>,
     T: Float,
 {
     let hb_a = a.hitbox_mut();
@@ -174,8 +147,8 @@ where
 
 pub struct Collider<T> {
     cor: T,
-    last_colliding_x: HashSet<ObjectIdPair>,
-    last_colliding_y: HashSet<ObjectIdPair>,
+    last_colliding_x: HashSet<Pair<ObjectKey>>,
+    last_colliding_y: HashSet<Pair<ObjectKey>>,
 }
 
 impl<T> Collider<T>
@@ -190,7 +163,10 @@ where
         }
     }
 
-    fn unclip(&self, a: &mut dyn Object<T>, b: &mut dyn Object<T>) -> Axis {
+    fn unclip<O>(&self, a: &mut O, b: &mut O) -> Axis
+    where
+        O: Object<T>,
+    {
         let (a_x0, a_x1, a_y0, a_y1) = a.hitbox().bounds();
         let (b_x0, b_x1, b_y0, b_y1) = b.hitbox().bounds();
 
@@ -236,14 +212,15 @@ where
         unclip_axis
     }
 
-    pub fn collide(&mut self, objects: &mut [&mut dyn Object<T>])
+    pub fn collide<O>(&mut self, objects: &mut [&mut O])
     where
+        O: Object<T>,
         T: Float,
     {
-        let idx_by_id: HashMap<ObjectId, usize> = objects
+        let idx_by_id: HashMap<ObjectKey, usize> = objects
             .iter()
             .enumerate()
-            .map(|(idx, obj)| (obj.id().copy(), idx))
+            .map(|(idx, obj)| (obj.key(), idx))
             .collect();
 
         let scanlist_x = scan_axis(objects, Axis::X);
@@ -253,15 +230,16 @@ where
         }
         let scanlist_y = scan_axis(objects, Axis::Y);
         let colliding_y = find_axis_collisions(&scanlist_y);
-        let mut colliding_xy: HashSet<ObjectIdPair> = HashSet::new();
+        let mut colliding_xy: HashSet<Pair<ObjectKey>> = HashSet::new();
         for k in colliding_x.iter() {
             if colliding_y.contains(k) {
-                colliding_xy.insert(k.copy());
+                colliding_xy.insert(*k);
             }
         }
         for pair in colliding_xy.iter() {
-            let left_idx = idx_by_id.get(&pair.0).unwrap();
-            let right_idx = idx_by_id.get(&pair.1).unwrap();
+            let pairt = pair.tuple();
+            let left_idx = idx_by_id.get(pairt.0).unwrap();
+            let right_idx = idx_by_id.get(pairt.1).unwrap();
             assert_ne!(left_idx, right_idx, "same object!?");
 
             let last_x_collided = self.last_colliding_x.contains(pair);
@@ -274,16 +252,16 @@ where
                 (true, true) => {
                     let axis: Axis;
                     unsafe {
-                        let obj1: *mut dyn Object<T> = objects[*left_idx] as *mut dyn Object<T>;
-                        let obj2: *mut dyn Object<T> = objects[*right_idx] as *mut dyn Object<T>;
+                        let obj1: *mut O = objects[*left_idx] as *mut O;
+                        let obj2: *mut O = objects[*right_idx] as *mut O;
                         axis = self.unclip(&mut *obj1, &mut *obj2);
                     }
                     vec![axis]
                 }
             };
             unsafe {
-                let obj1: *mut dyn Object<T> = objects[*left_idx] as *mut dyn Object<T>;
-                let obj2: *mut dyn Object<T> = objects[*right_idx] as *mut dyn Object<T>;
+                let obj1: *mut O = objects[*left_idx] as *mut O;
+                let obj2: *mut O = objects[*right_idx] as *mut O;
                 for axis in collide_axes {
                     collide(&mut *obj1, &mut *obj2, axis, self.cor);
                 }
@@ -294,41 +272,79 @@ where
     }
 }
 
-fn scan_axis<T>(objects: &[&mut dyn Object<T>], axis: Axis) -> Vec<(T, ObjectId, bool)>
+fn scan_axis<O, T>(objects: &[&mut O], axis: Axis) -> Vec<(T, ObjectKey, bool)>
 where
     T: Float,
+    O: Object<T>,
 {
-    let mut coords: Vec<(T, ObjectId, bool)> = Vec::with_capacity(2 * objects.len());
+    let mut coords: Vec<(T, ObjectKey, bool)> = Vec::with_capacity(2 * objects.len());
     for object in objects.iter() {
         let hb = object.hitbox();
         let c = *hb.mov.pos.ax(axis);
         let w = T::from_usize(hb.dimension(axis)).unwrap();
-        coords.push((c, object.id().copy(), true));
-        coords.push((c + w, object.id().copy(), false));
+        coords.push((c, object.key(), true));
+        coords.push((c + w, object.key(), false));
     }
     coords.sort_by(|(c1, _, _), (c2, _, _)| c1.partial_cmp(c2).unwrap());
     coords
 }
 
-fn find_axis_collisions<T>(scanlist: &[(T, ObjectId, bool)]) -> HashSet<ObjectIdPair>
+fn find_axis_collisions<T>(scanlist: &[(T, ObjectKey, bool)]) -> HashSet<Pair<ObjectKey>>
 where
     T: Float,
 {
     if scanlist.is_empty() {
         return HashSet::new();
     }
-    let mut colliding: HashSet<ObjectIdPair> = HashSet::new();
-    let mut intersecting: HashSet<ObjectId> = HashSet::new();
+    let mut colliding: HashSet<Pair<ObjectKey>> = HashSet::new();
+    let mut intersecting: HashSet<ObjectKey> = HashSet::new();
     for (_, id, is_in) in scanlist {
         if *is_in {
             for other_id in intersecting.iter() {
-                let p = ObjectIdPair::new(id, other_id);
+                let p: Pair<ObjectKey> = Pair::new(*id, *other_id);
                 colliding.insert(p);
             }
-            intersecting.insert(id.copy());
+            intersecting.insert(*id);
         } else {
             intersecting.remove(id);
         }
     }
     colliding
+}
+
+pub struct Box2DPhysics<T> {
+    collider: Collider<T>,
+}
+
+impl<T> Box2DPhysics<T>
+where
+    T: Float,
+{
+    pub fn new(cor: T) -> Self {
+        Self {
+            collider: Collider::new(cor),
+        }
+    }
+}
+
+impl<T, O> Physics<O> for Box2DPhysics<T>
+where
+    T: Float,
+    O: Object<T>,
+{
+    fn tick(&mut self, space: &mut Space<O>, delta_t: f32) {
+        let mut objects: Vec<&mut O> = space.objects_mut().collect();
+        self.collider.collide::<O>(&mut objects);
+        for obj in objects {
+            obj.hitbox_mut().mov.update(delta_t);
+        }
+    }
+}
+
+pub fn box2d_universe<T, O>(cor: T) -> Universe<Box2DPhysics<T>, O>
+where
+    T: Float,
+    O: Object<T>,
+{
+    Universe::new(Box2DPhysics::new(cor))
 }

@@ -1,7 +1,7 @@
 use std::{cell::RefCell, marker::PhantomData, rc::Rc};
 
-use crate::{
-    event::{EventSource, EventType},
+use wasm_retro_gamekit::{
+    event::{EventRouter, EventType},
     game::{MutStateWorld, Response},
     input::{
         keyboard::{Key, KeyMap},
@@ -84,7 +84,7 @@ where
         state.randomize(self.density);
         state
     }
-    fn start(&mut self, _now: f32, events: &mut EventSource) {
+    fn start(&mut self, _now: f32, events: &mut EventRouter) {
         events.add_listener(
             &[EventType::KeyDown, EventType::KeyUp],
             InputStateListener::new(self.input.clone()),

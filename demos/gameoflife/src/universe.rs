@@ -1,5 +1,5 @@
 use super::cell::Cell;
-use crate::grid::{Grid, Vector};
+use wasm_retro_gamekit::grid::{Grid, Vector};
 
 #[derive(Default)]
 pub struct Universe<T: Cell> {

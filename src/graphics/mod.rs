@@ -1,127 +1,20 @@
-use std::{collections::HashMap, rc::Rc};
+mod palette;
+mod sprite;
+
+use std::collections::HashMap;
 
 use crate::{
     display::{Color, Frame},
-    grid::{Grid, Vector},
+    grid::Vector,
 };
 
-#[derive(Copy, Clone, Debug, Default)]
-#[repr(u8)]
-pub enum PColor {
-    #[default]
-    C1 = 0,
-    C2 = 1,
-    C3 = 2,
-    C4 = 3,
-    C5 = 4,
-    C6 = 5,
-    C7 = 6,
-    C8 = 7,
-    T = 255,
-}
+pub use self::palette::*;
+pub use self::sprite::*;
 
-pub struct Palette([Color; 8]);
-
-impl Palette {
-    pub fn new(colors: [Color; 8]) -> Self {
-        Self(colors)
-    }
-    pub fn colors(&self) -> [Color; 8] {
-        self.0
-    }
-    pub fn color(&self, pc: PColor) -> Color {
-        match pc {
-            PColor::T => Color::rgba(0, 0, 0, 0),
-            _ => self.0[pc as usize],
-        }
-    }
-}
-
-pub type PaletteRef = Rc<Palette>;
-
-#[derive(Clone)]
-pub struct SpriteImage {
-    pixels: Grid<PColor>,
-}
-
-impl SpriteImage {
-    pub fn new(pixels: Vec<PColor>, width: usize, height: usize) -> Self {
-        assert_eq!(pixels.len(), width * height, "wrong SpriteImage dimensions");
-        let mut grid: Grid<PColor> = pixels.into_iter().collect();
-        grid.reshape(width, height);
-        Self { pixels: grid }
-    }
-
-    pub fn width(&self) -> usize {
-        self.pixels.width()
-    }
-
-    pub fn height(&self) -> usize {
-        self.pixels.height()
-    }
-
-    pub fn get_pixel(&self, v: Vector) -> PColor {
-        *self.pixels.get(v)
-    }
-}
-
-pub type SpriteImageRef = Rc<SpriteImage>;
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-#[repr(u8)]
-pub enum Layer {
-    L0 = 0,
-    L1 = 1,
-    L2 = 2,
-    L3 = 3,
-    L4 = 4,
-    L5 = 5,
-    L6 = 6,
-    L7 = 7,
-}
-
-static LAYERS: [Layer; 8] = [
-    Layer::L0,
-    Layer::L1,
-    Layer::L2,
-    Layer::L3,
-    Layer::L4,
-    Layer::L5,
-    Layer::L6,
-    Layer::L7,
-];
-
-pub struct Sprite {
-    pos: Vector,
-    layer: Layer,
-    image: SpriteImageRef,
-    palette: PaletteRef,
-}
-
-impl Sprite {
-    pub fn new(pos: Vector, layer: Layer, image: SpriteImageRef, palette: PaletteRef) -> Self {
-        Self {
-            pos,
-            layer,
-            image,
-            palette,
-        }
-    }
-
-    pub fn pos(&self) -> Vector {
-        self.pos
-    }
-
-    pub fn layer(&self) -> Layer {
-        self.layer
-    }
-
-    pub fn image(&self) -> SpriteImageRef {
-        self.image.clone()
-    }
-
-    pub fn palette(&self) -> PaletteRef {
-        self.palette.clone()
+pub trait Paint {
+    fn paint(&self, palette: PaletteRef) -> Option<Sprite>;
+    fn palette(&self) -> Option<PaletteRef> {
+        None
     }
 }
 
@@ -150,9 +43,14 @@ impl Scene {
         self.bg_color = color;
     }
 
-    pub fn add_sprite(&mut self, sprite: Sprite) {
-        let layer = sprite.layer;
-        self.sprites.get_mut(&layer).unwrap().push(sprite);
+    pub fn add_sprite(&mut self, sprite: Sprite) -> bool {
+        if self.is_out_of_bounds(&sprite) {
+            false
+        } else {
+            let layer = sprite.layer;
+            self.sprites.get_mut(&layer).unwrap().push(sprite);
+            true
+        }
     }
 
     fn render_background(&self, frame: &mut Frame) {
@@ -162,28 +60,37 @@ impl Scene {
         }
     }
 
-    fn render_sprite(&self, sprite: &Sprite, frame: &mut Frame) {
+    fn is_out_of_bounds(&self, sprite: &Sprite) -> bool {
         let vtl = sprite.pos();
         let image = sprite.image();
-        let palette = sprite.palette().colors();
 
-        if vtl.x > (self.width as i64)
+        vtl.x > (self.width as i64)
             || (vtl.x + image.width() as i64) < 0
             || vtl.y > self.height as i64
             || (vtl.y + image.height() as i64) < 0
-        {
-            return;
-        }
+    }
 
-        for y in 0..image.height() {
-            for x in 0..image.width() {
-                let vs = Vector::new(x as i64, y as i64);
-                let vf = vtl + vs;
-                let pixel = image.get_pixel(vs);
+    fn render_sprite(&self, sprite: &Sprite, frame: &mut Frame) {
+        let image = sprite.image();
+        let palette = sprite.palette().colors();
+
+        let v_img_tl = sprite.pos();
+        let v_img_br = v_img_tl + Vector::new(image.width() as i64, image.height() as i64);
+
+        let scn_x_min = v_img_tl.x.max(0);
+        let scn_x_max = v_img_br.x.min(self.width as i64);
+        let scn_y_min = v_img_tl.y.max(0);
+        let scn_y_max = v_img_br.y.min(self.height as i64);
+
+        for y in scn_y_min..scn_y_max {
+            for x in scn_x_min..scn_x_max {
+                let v_scn_pxl = Vector::new(x, y);
+                let v_img_pxl = v_scn_pxl - v_img_tl;
+                let pixel = image.get_pixel(v_img_pxl);
                 match pixel {
                     PColor::T => (),
                     _ => {
-                        frame.set_pixel(vf, palette[pixel as usize]);
+                        frame.set_pixel(v_scn_pxl, palette[*pixel as usize]);
                     }
                 }
             }

@@ -1,7 +1,7 @@
-use crate::{display::Window, event::EventSource, graphics::Scene};
+use crate::{display::Window, event::EventRouter, graphics::Scene};
 
 pub trait Game {
-    fn start(&mut self, now: f32, events: &mut EventSource);
+    fn start(&mut self, now: f32, events: &mut EventRouter);
     fn tick(&mut self, now: f32) -> Response;
     fn paint(&self) -> Scene;
     fn scene_width(&self) -> usize;
@@ -16,7 +16,7 @@ pub enum Response {
 
 pub trait MutStateWorld<T> {
     fn initial_state(&mut self) -> T;
-    fn start(&mut self, now: f32, events: &mut EventSource);
+    fn start(&mut self, now: f32, events: &mut EventRouter);
     fn tick(&mut self, now: f32, state: &mut T) -> Response;
 }
 
@@ -51,7 +51,7 @@ where
     W: MutStateWorld<T>,
     P: Painter<T>,
 {
-    fn start(&mut self, now: f32, events: &mut EventSource) {
+    fn start(&mut self, now: f32, events: &mut EventRouter) {
         self.world.start(now, events)
     }
     fn scene_height(&self) -> usize {
@@ -74,7 +74,7 @@ pub struct GameRunner {
     min_render_t: Option<f32>,
     finished: bool,
     need_render: bool,
-    events: Option<EventSource>,
+    events: Option<EventRouter>,
 }
 
 impl GameRunner {
@@ -92,7 +92,7 @@ impl GameRunner {
         }
     }
 
-    pub fn start(&mut self, now: f32, mut events: EventSource) {
+    pub fn start(&mut self, now: f32, mut events: EventRouter) {
         self.game.start(now, &mut events);
         self.events = Some(events);
     }

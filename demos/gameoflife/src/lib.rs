@@ -1,8 +1,9 @@
-use crate::game::{Game, MutStateGame};
+use wasm_retro_gamekit::game::{Game, MutStateGame};
 
 use self::{cell::ConwayCell, painter::CellAutomataPainter, world::CellAutomataWorld};
 
 mod cell;
+pub mod js;
 mod painter;
 mod universe;
 mod world;

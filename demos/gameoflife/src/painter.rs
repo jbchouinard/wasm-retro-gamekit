@@ -1,9 +1,9 @@
 use std::{marker::PhantomData, rc::Rc};
 
-use crate::{
+use wasm_retro_gamekit::{
     display::Color,
     game::Painter,
-    graphics::{Layer, PColor, Palette, PaletteRef, Scene, Sprite, SpriteImage, SpriteImageRef},
+    graphics::{Layer, PColor, Palette, PaletteRef, Scene, Sprite, SpritePixels, SpritePixelsRef},
     grid::Vector,
 };
 
@@ -27,8 +27,8 @@ impl<T> CellAutomataPainter<T>
 where
     T: Cell,
 {
-    fn make_cell_image(&self, color: PColor) -> SpriteImageRef {
-        Rc::new(SpriteImage::new(vec![color; 4], 2, 2))
+    fn make_cell_image(&self, color: PColor) -> SpritePixelsRef {
+        Rc::new(SpritePixels::uniform(2, 2, color))
     }
     fn paint_cell(&self, vc: Vector, state: &Universe<T>, scene: &mut Scene) {
         let grid = state.grid();

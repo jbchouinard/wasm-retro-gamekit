@@ -1,4 +1,6 @@
-use crate::input::keyboard::KeyMap;
+use std::{cell::RefCell, rc::Rc};
+
+use wasm_retro_gamekit::input::{keyboard::KeyMap, Dpad, InputState, InputStateRef};
 
 #[derive(Copy, Clone, Debug)]
 #[repr(u8)]
@@ -22,4 +24,15 @@ pub fn keymap() -> KeyMap {
     km.set_key_mapping("ArrowLeft", Keys::Left);
     km.set_key_mapping("ArrowRight", Keys::Right);
     km
+}
+
+pub fn inputs() -> (InputStateRef, Dpad<Keys>) {
+    let mut input = InputState::new();
+    input.set_keymap(keymap());
+    let inputref = Rc::new(RefCell::new(input));
+    let dpad = Dpad::new(
+        inputref.clone(),
+        [Keys::Up, Keys::Down, Keys::Left, Keys::Right],
+    );
+    (inputref, dpad)
 }

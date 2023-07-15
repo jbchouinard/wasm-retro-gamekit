@@ -2,6 +2,8 @@ use std::cell::RefCell;
 use std::collections::{HashSet, VecDeque};
 use std::rc::Rc;
 
+use crate::vector::vec2d::Vec2d;
+
 #[derive(Clone, Debug)]
 pub struct KeyEvent {
     pub key: String,
@@ -13,8 +15,7 @@ pub struct KeyEvent {
 
 #[derive(Clone, Debug)]
 pub struct MouseClickEvent {
-    pub x: usize,
-    pub y: usize,
+    pub pos: Vec2d<f32>,
 }
 
 #[derive(Clone, Debug)]
@@ -97,11 +98,25 @@ pub trait EventListener {
     }
 }
 
+pub struct EventPipe(EventQueue);
+
+impl EventPipe {
+    pub fn new(queue: EventQueue) -> Self {
+        Self(queue)
+    }
+}
+
+impl EventListener for EventPipe {
+    fn on_event(&mut self, event: &Event) {
+        let _ = self.0.send(event.clone());
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct ListenerHandle(usize);
 
-pub struct EventSource {
-    bus: EventQueue,
+pub struct EventRouter {
+    source: EventQueue,
     listeners: Vec<Box<dyn EventListener>>,
     wants_key_up: HashSet<usize>,
     wants_key_down: HashSet<usize>,
@@ -109,10 +124,10 @@ pub struct EventSource {
     wants_window_resize: HashSet<usize>,
 }
 
-impl EventSource {
+impl EventRouter {
     pub fn new(bus: EventQueue) -> Self {
         Self {
-            bus,
+            source: bus,
             listeners: Vec::new(),
             wants_key_down: HashSet::new(),
             wants_key_up: HashSet::new(),
@@ -144,7 +159,7 @@ impl EventSource {
         todo!()
     }
     pub fn dispatch(&mut self) {
-        while let Some(event) = self.bus.recv() {
+        while let Some(event) = self.source.recv() {
             let wants = match event.event_type() {
                 EventType::KeyDown => &self.wants_key_down,
                 EventType::KeyUp => &self.wants_key_up,
