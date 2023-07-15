@@ -1,0 +1,8 @@
+{
+    "name": "retro-gamekit",
+    "main": "retro-gamekit.js",
+    "description": "Glue code to run browser games made with wasm-retro-gamekit.",
+    "version": "0.1.0",
+    "dependencies": {},
+    "devDependencies": {}
+}
