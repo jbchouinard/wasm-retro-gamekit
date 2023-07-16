@@ -13,7 +13,8 @@ crate-type = ["cdylib", "lib"]
 
 [dependencies]
 wasm-bindgen = "0.2.84"
-wasm-retro-gamekit = { path = "../.." }
+wasm-retro-gamekit = { git = "https://github.com/jbchouinard/wasm-retro-gamekit.git" }
+# wasm-retro-gamekit = { path = "../.." }
 
 [profile.release]
 opt-level = 3

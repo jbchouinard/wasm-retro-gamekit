@@ -1,6 +1,6 @@
 import { memory } from "wasm_retro_gamekit_life/wasm_retro_gamekit_life_bg"
 import { GameOfLife, init_once } from "wasm_retro_gamekit_life";
-import { startGameFullscreen } from "../../../www/retro-gamekit";
+import { startGameFullscreen } from "retro-gamekit-bootstrap";
 
 init_once();
 

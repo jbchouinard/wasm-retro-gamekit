@@ -1,9 +1,9 @@
 [package]
 name = "wasm-retro-gamekit"
+version = "0.0.1"
 description = "A toolkit for building browser games with Rust + WASM."
 repository = "https://github.com/jbchouinard/wasm-retro-gamekit"
 readme = "README.md"
-version = "0.0.1"
 authors = ["Jerome Boisvert-Chouinard <github@jbchouinard.net>"]
 license = "Apache-2.0"
 edition = "2021"

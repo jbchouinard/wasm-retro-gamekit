@@ -1,6 +1,7 @@
 {
   "name": "wasm-retro-gamekit-demo-life",
   "version": "0.1.0",
+  "license": "Apache-2.0",
   "description": "A wasm-retro-gamekit demo game: BouncyBox.",
   "main": "index.js",
   "scripts": {
@@ -20,7 +21,8 @@
   "author": "Jerome Boisvert-Chouinard <github@jbchouinard.net>",
   "homepage": "https://github.com/jbchouinard/wasm-retro-gamekit#readme",
   "dependencies": {
-    "wasm_retro_gamekit_life": "file:../pkg"
+    "wasm_retro_gamekit_life": "file:../pkg",
+    "retro-gamekit-bootstrap": "jbchouinard/wasm-retro-gamekit"
   },
   "devDependencies": {
     "webpack": "^4.29.3",
