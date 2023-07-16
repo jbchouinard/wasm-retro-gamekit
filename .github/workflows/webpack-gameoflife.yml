@@ -1,4 +1,4 @@
-name: webpack/bouncybox
+name: webpack/gameoflife
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./demos/bouncybox/www
+        working-directory: ./demos/gameoflife/www
     steps:
       - uses: actions/checkout@v3
 
@@ -35,5 +35,5 @@ jobs:
       - name: Archive webpack dist
         uses: actions/upload-artifact@v3
         with:
-          name: demo-bouncybox
+          name: demo-gameoflife
           path: dist

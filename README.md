@@ -49,8 +49,8 @@ Future features?
 
 
 ## Demos
-- Bouncy Box: [source](demos/bouncybox), link (coming soon)
-- Game of Life: [source](demos/gameoflife), link (coming soon)
+- [Bouncy Boxes](https://jbchouinard.github.io/wasm-retro-gamekit/bouncybox/) ([source](demos/bouncybox))
+- [Conway's Game of Life](https://jbchouinard.github.io/wasm-retro-gamekit/gameoflife/) ([source](demos/gameoflife))
 
 
 ## Usage

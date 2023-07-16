@@ -8,5 +8,4 @@ startGameFullscreen(
     memory,
     GameOfLife(window.innerWidth / 2, window.innerHeight / 2, 0.5, 1000),
     document.getElementById("game-canvas"),
-    "frametime"
 );
