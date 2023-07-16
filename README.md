@@ -6,7 +6,46 @@ with Rust and WebAssembly.
 This is a learning project, if you want to build a real game you should be using
 Unity or whatever.
 
-Features
+
+## Demos
+- [Bouncy Boxes](https://jbchouinard.github.io/wasm-retro-gamekit/bouncybox/) ([source](demos/bouncybox))
+- [Conway's Game of Life](https://jbchouinard.github.io/wasm-retro-gamekit/gameoflife/) ([source](demos/gameoflife))
+
+
+## Requirements
+- [Rust](https://rustup.rs/)
+- [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
+- [Node.js and npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+
+
+## Usage: Making a Game
+
+See [Demos](#demos) for examples of small "games" built with `wasm-retro-gamekit`.
+
+### Tutorial
+
+(work in progress)
+
+```sh
+cargo new my-game --lib
+```
+
+Cargo.toml
+```toml
+[dependencies]
+wasm-retro-gamekit = { git = "https://github.com/jbchouinard/wasm-retro-gamekit.git" }
+```
+
+A game consists of a Rust struct which implements the `wasm_retro_gamekit::game::Game`
+trait.
+
+The Rust library should expose a function which returns a `wasm_retro_gamekit::js::GameHandle`
+struct.
+
+
+## Roadmap
+
+Current features
 - 2D sprites
 - 2D viewport
 - 2D rectangular hitbox collision physics
@@ -40,42 +79,6 @@ Future features?
 - Developer experience
     - Replace JS glue code with `web-sys`
     - Logging
-
-
-## Requirements
-- [Rust](https://rustup.rs/)
-- [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
-- [Node.js and npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
-
-
-## Demos
-- [Bouncy Boxes](https://jbchouinard.github.io/wasm-retro-gamekit/bouncybox/) ([source](demos/bouncybox))
-- [Conway's Game of Life](https://jbchouinard.github.io/wasm-retro-gamekit/gameoflife/) ([source](demos/gameoflife))
-
-
-## Usage
-
-See [Demos][#Demos] for examples of small "games" built with `wasm-retro-gamekit`.
-
-### Tutorial: Making a game
-
-(work in progress)
-
-```sh
-cargo new my-game --lib
-```
-
-Cargo.toml
-```toml
-[dependencies]
-wasm-retro-gamekit = { git = "https://github.com/jbchouinard/wasm-retro-gamekit.git" }
-```
-
-A game consists of a Rust struct which implements the `wasm_retro_gamekit::game::Game`
-trait.
-
-The Rust library should expose a function which returns a `wasm_retro_gamekit::js::GameHandle`
-struct.
 
 
 ## License
