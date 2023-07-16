@@ -1,8 +1,6 @@
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
-use num::{One, Zero};
-
-use crate::num::Float;
+use crate::num::{Float, One, Zero};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Axis {

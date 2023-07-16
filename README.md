@@ -57,6 +57,7 @@ Future features?
 - Input
     - Mouse position input
     - Game controller input
+    - Touch input
 - Audio
     - Music
     - Sounds
