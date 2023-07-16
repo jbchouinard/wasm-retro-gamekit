@@ -1,4 +1,4 @@
-name: Webpack/bouncybox
+name: webpack/bouncybox
 
 on:
   push:
