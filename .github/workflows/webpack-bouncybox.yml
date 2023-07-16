@@ -1,9 +1,7 @@
-name: Build BouncyBox demo
+name: Webpack/bouncybox
 
 on:
   push:
-    branches: [ "master" ]
-  pull_request:
     branches: [ "master" ]
 
 env:
@@ -14,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./demos/bouncybox
+        working-directory: ./demos/bouncybox/www
     steps:
       - uses: actions/checkout@v3
 
@@ -30,13 +28,18 @@ jobs:
         run: wasm-pack build --release
 
       - name: Build site with webpack
-        working-directory: ./demos/bouncybox/www
         run: |
           npm install
           npx webpack --config webpack.config.js
   
-      - name: Webpack dist archive
+      - name: Archive webpack dist
         uses: actions/upload-artifact@v3
         with:
           name: demo-bouncybox
-          path: demos/bouncybox/www/dist
+          path: dist
+    
+      - name: Deploy webpack dist to GH Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist
