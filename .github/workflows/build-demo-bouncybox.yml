@@ -1,0 +1,42 @@
+name: Build BouncyBox demo
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./demos/bouncybox
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+  
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build wasm lib with wasm-pack
+        run: wasm-pack build --release
+
+      - name: Build site with webpack
+        working-directory: ./demos/bouncybox/www
+        run: |
+          npm install
+          npx webpack --config webpack.config.js
+  
+      - name: Webpack dist archive
+        uses: actions/upload-artifact@v3
+        with:
+          name: demo-bouncybox
+          path: demos/bouncybox/www/dist
