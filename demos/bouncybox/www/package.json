@@ -21,13 +21,13 @@
   "author": "Jerome Boisvert-Chouinard <github@jbchouinard.net>",
   "homepage": "https://github.com/jbchouinard/wasm-retro-gamekit#readme",
   "dependencies": {
-    "wasm_retro_gamekit_bouncybox": "file:../pkg",
-    "retro-gamekit-bootstrap": "jbchouinard/wasm-retro-gamekit"
+    "retro-gamekit-bootstrap": "jbchouinard/wasm-retro-gamekit",
+    "wasm_retro_gamekit_bouncybox": "file:../pkg"
   },
   "devDependencies": {
-    "webpack": "^4.29.3",
-    "webpack-cli": "^3.1.0",
-    "webpack-dev-server": "^3.1.5",
-    "copy-webpack-plugin": "^5.0.0"
+    "copy-webpack-plugin": "^11.0.0",
+    "webpack": "^5.88.1",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1"
   }
 }
