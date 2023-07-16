@@ -1,6 +1,7 @@
-use std::{cell::RefCell, rc::Rc};
-
-use wasm_retro_gamekit::input::{keyboard::KeyMap, Dpad, InputState, InputStateRef};
+use wasm_retro_gamekit::{
+    event::{KeyEvent, Source},
+    input::{keyboard::KeyMap, Dpad, InputState},
+};
 
 #[derive(Copy, Clone, Debug)]
 #[repr(u8)]
@@ -26,13 +27,12 @@ pub fn keymap() -> KeyMap {
     km
 }
 
-pub fn inputs() -> (InputStateRef, Dpad<Keys>) {
-    let mut input = InputState::new();
+pub fn dpad() -> Dpad<Keys> {
+    Dpad::new([Keys::Up, Keys::Down, Keys::Left, Keys::Right])
+}
+
+pub fn inputs(events: Source<KeyEvent>) -> InputState {
+    let mut input = InputState::new(events);
     input.set_keymap(keymap());
-    let inputref = Rc::new(RefCell::new(input));
-    let dpad = Dpad::new(
-        inputref.clone(),
-        [Keys::Up, Keys::Down, Keys::Left, Keys::Right],
-    );
-    (inputref, dpad)
+    input
 }

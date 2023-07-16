@@ -3,14 +3,15 @@ pub mod js;
 
 use std::rc::Rc;
 
+use input::dpad;
 use wasm_retro_gamekit::{
     display::Color,
-    event::{Event, EventQueue, EventRouter, MouseClickEvent},
+    event::{Events, MouseButton, MouseEvent, MouseEventKind, Source},
     game::{Game, Response},
     graphics::{
         Layer, PColor, Paint, Palette, PaletteRef, Scene, Sprite, SpritePixels, SpritePixelsRef,
     },
-    input::{bind_input, bind_mouse, Dpad, InputStateRef},
+    input::{Dpad, InputState},
     physics::{
         box2d::{Box2DPhysics, HitBox, Mass, Mov, Object, ObjectId},
         identity::{Identity, ObjectKey},
@@ -26,17 +27,15 @@ pub struct BouncyBoxWorld {
     universe: Universe<Box2DPhysics<f32>, Rectangle>,
     player_key: ObjectKey,
     viewport: Viewport,
-    input: InputStateRef,
+    input: Option<InputState>,
     dpad: Dpad<Keys>,
-    mouse: EventQueue,
+    mouse: Option<Source<MouseEvent>>,
     last_t: f32,
     palette: PaletteRef,
 }
 
 impl BouncyBoxWorld {
     pub fn new(width: usize, height: usize, cor: f32, palette: PaletteRef) -> Self {
-        let (input, dpad) = inputs();
-
         let viewport = Viewport::new(
             V::new(-(width as i64) / 2, -(height as i64) / 2),
             width,
@@ -54,9 +53,9 @@ impl BouncyBoxWorld {
         Self {
             scale,
             last_t: 0.0,
-            input,
-            dpad,
-            mouse: EventQueue::new(100),
+            input: None,
+            mouse: None,
+            dpad: dpad(),
             player_key,
             viewport,
             universe,
@@ -65,37 +64,50 @@ impl BouncyBoxWorld {
     }
 
     fn recv_mouse(&mut self) {
-        while let Some(event) = self.mouse.recv() {
-            if let Event::MouseClick(mevent) = event {
-                self.on_mouse_click(mevent);
+        let mut clicks: Vec<(V<f32>, MouseButton)> = vec![];
+        if let Some(mouse) = &self.mouse {
+            while let Some(event) = mouse.recv() {
+                if let MouseEventKind::Down(button) = event.kind {
+                    clicks.push((event.pos, button));
+                }
             }
+        }
+        for (pos, button) in clicks {
+            self.on_mouse_down(pos, button);
         }
     }
 
-    fn on_mouse_click(&mut self, event: MouseClickEvent) {
-        let size = self.scale;
-        let center_pos = self.viewport.relative_pos(event.pos);
-        let tl_pos = center_pos - V::new((size as i64) / 2, (size as i64) / 2);
-        self.universe
-            .space_mut()
-            .add(square(size, tl_pos, 1.0, PColor::C2));
+    fn on_mouse_down(&mut self, pos: V<f32>, button: MouseButton) {
+        if let MouseButton::Right = button {
+            let size = self.scale;
+            let center_pos = self.viewport.relative_pos(pos);
+            let tl_pos = center_pos - V::new((size as i64) / 2, (size as i64) / 2);
+            self.universe
+                .space_mut()
+                .add(square(size, tl_pos, 1.0, PColor::C2));
+        }
     }
 
     fn update_player_accel(&mut self) {
-        let space = self.universe.space_mut();
-        let player = space.get_mut(self.player_key).unwrap();
-        player.hitbox.mov.acc = self.dpad.norm_v() * 0.001;
+        if let Some(input) = &self.input {
+            let space = self.universe.space_mut();
+            let player = space.get_mut(self.player_key).unwrap();
+            player.hitbox.mov.acc = self.dpad.read(input) * 0.001;
+        }
     }
 }
 
 impl Game for BouncyBoxWorld {
-    fn start(&mut self, now: f32, events: &mut EventRouter) {
+    fn start(&mut self, now: f32, events: &mut Events) {
         self.last_t = now;
-        bind_input(self.input.clone(), events);
-        bind_mouse(events, &self.mouse);
+        self.input = Some(inputs(events.key_events()));
+        self.mouse = Some(events.mouse_events());
     }
 
     fn tick(&mut self, now: f32) -> Response {
+        if let Some(input) = &mut self.input {
+            input.update();
+        }
         self.recv_mouse();
         self.update_player_accel();
         self.universe.tick(now - self.last_t);

@@ -1,7 +1,11 @@
-use crate::{display::Window, event::EventRouter, graphics::Scene};
+use crate::{
+    display::Window,
+    event::{Event, Events, Pump, Sink},
+    graphics::Scene,
+};
 
 pub trait Game {
-    fn start(&mut self, now: f32, events: &mut EventRouter);
+    fn start(&mut self, now: f32, events: &mut Events);
     fn tick(&mut self, now: f32) -> Response;
     fn paint(&self) -> Scene;
     fn scene_width(&self) -> usize;
@@ -16,7 +20,7 @@ pub enum Response {
 
 pub trait MutStateWorld<T> {
     fn initial_state(&mut self) -> T;
-    fn start(&mut self, now: f32, events: &mut EventRouter);
+    fn start(&mut self, now: f32, events: &mut Events);
     fn tick(&mut self, now: f32, state: &mut T) -> Response;
 }
 
@@ -51,7 +55,7 @@ where
     W: MutStateWorld<T>,
     P: Painter<T>,
 {
-    fn start(&mut self, now: f32, events: &mut EventRouter) {
+    fn start(&mut self, now: f32, events: &mut Events) {
         self.world.start(now, events)
     }
     fn scene_height(&self) -> usize {
@@ -74,7 +78,8 @@ pub struct GameRunner {
     min_render_t: Option<f32>,
     finished: bool,
     need_render: bool,
-    events: Option<EventRouter>,
+    events: Events,
+    event_sink: Sink<Event>,
 }
 
 impl GameRunner {
@@ -82,31 +87,39 @@ impl GameRunner {
     where
         T: Game + 'static,
     {
+        let (events, event_sink) = Events::new();
         Self {
             game: Box::new(game),
             last_render_t: 0.0,
             min_render_t: fps_cap.map(|x| 1000.0 / x),
             finished: false,
             need_render: true,
-            events: None,
+            events,
+            event_sink,
         }
     }
 
-    pub fn start(&mut self, now: f32, mut events: EventRouter) {
-        self.game.start(now, &mut events);
-        self.events = Some(events);
+    pub fn start(&mut self, now: f32) {
+        self.game.start(now, &mut self.events);
     }
 
-    pub fn poll(&mut self) {
-        if let Some(events) = &mut self.events {
-            events.dispatch();
-        }
+    fn pump(&mut self) {
+        self.events.pump();
+    }
+
+    pub fn events(&mut self) -> &mut Events {
+        &mut self.events
+    }
+
+    pub fn event_sink(&self) -> Sink<Event> {
+        self.event_sink.clone()
     }
 
     pub fn tick(&mut self, now: f32, window: &mut Window) -> Response {
         if self.finished {
             return Response::Finished;
         }
+        self.pump();
         match self.game.tick(now) {
             Response::Empty => (),
             Response::RequestRedraw => {

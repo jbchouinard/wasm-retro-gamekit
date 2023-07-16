@@ -4,9 +4,10 @@ use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    display::{Window, WindowResizeListener},
+    display::Window,
     event::{
-        Event, EventQueue, EventRouter, EventType, KeyEvent, MouseClickEvent, WindowResizeEvent,
+        Event, KeyEvent, KeyEventKind, MouseButton, MouseEvent, MouseEventKind, Sink,
+        WindowResizeEvent,
     },
     game::{GameRunner, Response},
     vector::vec2d::Vec2d,
@@ -20,7 +21,7 @@ pub fn init_once() {
     //
     // For more details see
     // https://github.com/rustwasm/console_error_panic_hook#readme
-    #[cfg(feature = "console_error_panic_hook")]
+    #[cfg(feature = "console-panic")]
     console_error_panic_hook::set_once();
 }
 
@@ -44,60 +45,61 @@ impl WindowHandle {
 }
 
 #[wasm_bindgen]
-pub struct EventQueueHandle(EventQueue);
+pub struct EventQueueHandle(Sink<Event>);
 
 #[wasm_bindgen]
 impl EventQueueHandle {
-    pub fn send_click(&mut self, x: f32, y: f32) -> bool {
-        self.0
-            .send(Event::MouseClick(MouseClickEvent {
-                pos: Vec2d::new(x, y),
-            }))
-            .is_ok()
+    pub fn send_mouse_button(&mut self, ts: f32, x: f32, y: f32, button: u8, up: bool) {
+        let button = match button {
+            0 => MouseButton::Left,
+            1 => MouseButton::Middle,
+            2 => MouseButton::Right,
+            _ => {
+                return;
+            }
+        };
+        let kind = match up {
+            true => MouseEventKind::Up(button),
+            false => MouseEventKind::Down(button),
+        };
+        self.0.send(Event::Mouse(MouseEvent {
+            kind,
+            pos: Vec2d::new(x, y),
+            ts,
+        }))
     }
-    pub fn send_key_up(
-        &mut self,
-        key: &str,
-        alt: bool,
-        ctrl: bool,
-        shift: bool,
-        meta: bool,
-    ) -> bool {
-        self.0
-            .send(Event::KeyUp(KeyEvent {
-                key: key.to_string(),
-                alt,
-                ctrl,
-                meta,
-                shift,
-            }))
-            .is_ok()
+    pub fn send_mouse_move(&mut self, ts: f32, x: f32, y: f32) {
+        self.0.send(Event::Mouse(MouseEvent {
+            kind: MouseEventKind::Move,
+            pos: Vec2d::new(x, y),
+            ts,
+        }))
     }
-    pub fn send_key_down(
-        &mut self,
-        key: &str,
-        alt: bool,
-        ctrl: bool,
-        shift: bool,
-        meta: bool,
-    ) -> bool {
-        self.0
-            .send(Event::KeyDown(KeyEvent {
-                key: key.to_string(),
-                alt,
-                ctrl,
-                meta,
-                shift,
-            }))
-            .is_ok()
+    pub fn send_key_up(&mut self, key: &str, alt: bool, ctrl: bool, shift: bool, meta: bool) {
+        self.0.send(Event::Key(KeyEvent {
+            kind: KeyEventKind::Up,
+            key: key.to_string(),
+            alt,
+            ctrl,
+            meta,
+            shift,
+        }))
     }
-    pub fn send_window_resize(&mut self, width: u32, height: u32) -> bool {
-        self.0
-            .send(Event::WindowResize(WindowResizeEvent {
-                width: width as usize,
-                height: height as usize,
-            }))
-            .is_ok()
+    pub fn send_key_down(&mut self, key: &str, alt: bool, ctrl: bool, shift: bool, meta: bool) {
+        self.0.send(Event::Key(KeyEvent {
+            kind: KeyEventKind::Down,
+            key: key.to_string(),
+            alt,
+            ctrl,
+            meta,
+            shift,
+        }))
+    }
+    pub fn send_window_resize(&mut self, width: u32, height: u32) {
+        self.0.send(Event::WindowResize(WindowResizeEvent {
+            width: width as usize,
+            height: height as usize,
+        }))
     }
 }
 
@@ -105,27 +107,17 @@ impl EventQueueHandle {
 pub struct GameHandle {
     game: GameRunner,
     window: Rc<RefCell<Window>>,
-    event_queue: EventQueue,
 }
 
 impl GameHandle {
     pub fn new(mut game: GameRunner) -> Self {
-        let eq = EventQueue::new(0);
-        let mut source = EventRouter::new(eq.clone());
         let window = Rc::new(RefCell::new(Window::new(
             game.scene_width(),
             game.scene_height(),
+            game.events().window_resize_events(),
         )));
-        source.add_listener(
-            &[EventType::WindowResize],
-            WindowResizeListener::new(window.clone()),
-        );
-        game.start(0.0, source);
-        Self {
-            game,
-            window,
-            event_queue: eq,
-        }
+        game.start(0.0);
+        Self { game, window }
     }
 }
 
@@ -135,10 +127,10 @@ impl GameHandle {
         WindowHandle(self.window.clone())
     }
     pub fn event_queue(&self) -> EventQueueHandle {
-        EventQueueHandle(self.event_queue.clone())
+        EventQueueHandle(self.game.event_sink())
     }
     pub fn tick(&mut self, now: f32) -> String {
-        self.game.poll();
+        self.window.borrow_mut().update();
         match self.game.tick(now, &mut self.window.borrow_mut()) {
             Response::Empty => "Continue",
             Response::Finished => "Finished",

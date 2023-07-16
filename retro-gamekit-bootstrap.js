@@ -8,6 +8,8 @@ export function startGameFullscreen(memory, gameHandle, canvas, consoleFrameTime
     startGameLoop(memory, gameHandle, canvas, consoleFrameTimer)
 }
 
+var t = window.performance.now();
+
 function startGameLoop(memory, gameHandle, canvas, consoleFrameTimer) {
     if (consoleFrameTimer) {
         consoleFrameTimer = String(consoleFrameTimer);
@@ -18,15 +20,20 @@ function startGameLoop(memory, gameHandle, canvas, consoleFrameTimer) {
     let context2d = canvas.getContext("2d");
 
     function gameLoop() {
-        let response = gameHandle.tick(window.performance.now());
+        t = window.performance.now();
+        let response = gameHandle.tick(t);
         if (response == "Finished") {
             return
         } else if (response == "RequestRedraw" || requireRedraw) {
             const gameWindow = gameHandle.window();
             let width = gameWindow.image_width();
             let height = gameWindow.image_height();
-            canvas.width = width;
-            canvas.height = height;
+            if (canvas.width != width) {
+                canvas.width = width;
+            }
+            if (canvas.height != height) {
+                canvas.height = height;
+            }
             const imageDataArray = new Uint8ClampedArray(
                 memory.buffer,
                 gameWindow.image_data_ptr(),
@@ -46,16 +53,33 @@ function startGameLoop(memory, gameHandle, canvas, consoleFrameTimer) {
 }
 
 function addInputListeners(eventQueue, canvas, keyBind) {
-    canvas.addEventListener("click", (event) => {
-        eventQueue.send_click(event.layerX / canvas.width, event.layerY / canvas.height);
+    canvas.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
     });
+    canvas.addEventListener("mousedown", (event) => {
+        eventQueue.send_mouse_button(
+            t, event.layerX / canvas.width, event.layerY / canvas.height, event.button, false
+        );
+    })
+    canvas.addEventListener("mouseup", (event) => {
+        eventQueue.send_mouse_button(
+            t, event.layerX / canvas.width, event.layerY / canvas.height, event.button, true
+        );
+    })
+    canvas.addEventListener("mousemove", (event) => {
+        eventQueue.send_mouse_move(
+            t, event.layerX / canvas.width, event.layerY / canvas.height
+        );
+    })
     keyBind.addEventListener("keydown", (event) => {
         if (!event.repeat) {
             eventQueue.send_key_down(event.key, event.altKey, event.ctrlKey, event.shiftKey, event.metaKey);
         }
+        event.preventDefault();
     });
     keyBind.addEventListener("keyup", (event) => {
         eventQueue.send_key_up(event.key, event.altKey, event.ctrlKey, event.shiftKey, event.metaKey);
+        event.preventDefault();
     })
 }
 

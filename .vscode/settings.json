@@ -1,6 +1,7 @@
 {
     "rust-analyzer.linkedProjects": [
         "./demos/bouncybox/Cargo.toml",
-        "./demos/gameoflife/Cargo.toml"
+        "./demos/gameoflife/Cargo.toml",
+        "./Cargo.toml"
     ]
 }

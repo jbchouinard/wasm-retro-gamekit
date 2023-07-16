@@ -1,175 +1,82 @@
-use std::cell::RefCell;
-use std::collections::{HashSet, VecDeque};
-use std::rc::Rc;
+mod events;
+mod plumbing;
+mod queue;
 
-use crate::vector::vec2d::Vec2d;
+pub use self::events::*;
+pub use self::plumbing::*;
+// TODO: use mpsc::channel instead if not feature = "js"
+pub use self::queue::*;
 
-#[derive(Clone, Debug)]
-pub struct KeyEvent {
-    pub key: String,
-    pub alt: bool,
-    pub ctrl: bool,
-    pub meta: bool,
-    pub shift: bool,
+pub struct Events {
+    mains: Joint<Event>,
+    plumbing: Plumbing,
 }
 
-#[derive(Clone, Debug)]
-pub struct MouseClickEvent {
-    pub pos: Vec2d<f32>,
-}
+impl Events {
+    pub fn new() -> (Self, Sink<Event>) {
+        let plumbing = Plumbing::new();
+        let (sink, source) = plumbing.pipe::<Event>();
+        let mut mains = Joint::new();
+        mains.add_source(source);
+        (Self { plumbing, mains }, sink)
+    }
 
-#[derive(Clone, Debug)]
-pub struct WindowResizeEvent {
-    pub width: usize,
-    pub height: usize,
-}
+    pub fn plumbing(&mut self) -> &mut Plumbing {
+        &mut self.plumbing
+    }
 
-#[derive(Copy, Clone, Debug)]
-pub enum EventType {
-    KeyDown,
-    KeyUp,
-    MouseClick,
-    WindowResize,
-}
+    pub fn mouse_events(&mut self) -> Source<MouseEvent> {
+        let (e_sink, e_source) = self.plumbing.pipe::<Event>();
+        let (m_sink, m_source) = self.plumbing.pipe::<MouseEvent>();
+        self.mains.add_sink(e_sink);
+        self.plumbing
+            .filter(e_source, m_sink, FnFilter(filter_mouse_events));
+        m_source
+    }
 
-#[derive(Clone, Debug)]
-pub enum Event {
-    KeyDown(KeyEvent),
-    KeyUp(KeyEvent),
-    MouseClick(MouseClickEvent),
-    WindowResize(WindowResizeEvent),
-}
+    pub fn key_events(&mut self) -> Source<KeyEvent> {
+        let (e_sink, e_source) = self.plumbing.pipe::<Event>();
+        let (k_sink, k_source) = self.plumbing.pipe::<KeyEvent>();
+        self.mains.add_sink(e_sink);
+        self.plumbing
+            .filter(e_source, k_sink, FnFilter(filter_key_events));
+        k_source
+    }
 
-impl Event {
-    pub fn event_type(&self) -> EventType {
-        match self {
-            Self::KeyDown(_) => EventType::KeyDown,
-            Self::KeyUp(_) => EventType::KeyUp,
-            Self::MouseClick(_) => EventType::MouseClick,
-            Self::WindowResize(_) => EventType::WindowResize,
-        }
+    pub fn window_resize_events(&mut self) -> Source<WindowResizeEvent> {
+        let (e_sink, e_source) = self.plumbing.pipe::<Event>();
+        let (w_sink, w_source) = self.plumbing.pipe::<WindowResizeEvent>();
+        self.mains.add_sink(e_sink);
+        self.plumbing
+            .filter(e_source, w_sink, FnFilter(filter_resize_events));
+        w_source
     }
 }
 
-pub enum EventBusError {
-    QueueFull,
-}
-
-#[derive(Clone, Debug)]
-pub struct EventQueue {
-    max_size: usize,
-    queue: Rc<RefCell<VecDeque<Event>>>,
-}
-
-impl EventQueue {
-    pub fn new(max_size: usize) -> Self {
-        Self {
-            max_size,
-            queue: Rc::new(RefCell::new(VecDeque::new())),
-        }
-    }
-    pub fn send<T: Into<Event>>(&self, event: T) -> Result<(), EventBusError> {
-        let mut q = self.queue.borrow_mut();
-        if self.max_size > 0 && q.len() >= self.max_size {
-            Err(EventBusError::QueueFull)
-        } else {
-            q.push_front(event.into());
-            Ok(())
-        }
-    }
-    pub fn recv(&self) -> Option<Event> {
-        let mut q = self.queue.borrow_mut();
-        q.pop_back()
+impl Pump for Events {
+    fn pump(&mut self) {
+        self.mains.pump();
+        self.plumbing.pump();
     }
 }
 
-pub trait EventListener {
-    fn on_key_up(&mut self, _event: &KeyEvent) {}
-    fn on_key_down(&mut self, _event: &KeyEvent) {}
-    fn on_mouse_click(&mut self, _event: &MouseClickEvent) {}
-    fn on_window_resize(&mut self, _event: &WindowResizeEvent) {}
-    fn on_event(&mut self, event: &Event) {
-        match event {
-            Event::KeyDown(kevent) => self.on_key_down(kevent),
-            Event::KeyUp(kevent) => self.on_key_up(kevent),
-            Event::MouseClick(mevent) => self.on_mouse_click(mevent),
-            Event::WindowResize(wrevent) => self.on_window_resize(wrevent),
-        }
+fn filter_mouse_events(e: Event) -> Option<MouseEvent> {
+    match e {
+        Event::Mouse(mevent) => Some(mevent),
+        _ => None,
     }
 }
 
-pub struct EventPipe(EventQueue);
-
-impl EventPipe {
-    pub fn new(queue: EventQueue) -> Self {
-        Self(queue)
+fn filter_key_events(e: Event) -> Option<KeyEvent> {
+    match e {
+        Event::Key(kevent) => Some(kevent),
+        _ => None,
     }
 }
 
-impl EventListener for EventPipe {
-    fn on_event(&mut self, event: &Event) {
-        let _ = self.0.send(event.clone());
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-pub struct ListenerHandle(usize);
-
-pub struct EventRouter {
-    source: EventQueue,
-    listeners: Vec<Box<dyn EventListener>>,
-    wants_key_up: HashSet<usize>,
-    wants_key_down: HashSet<usize>,
-    wants_mouse_click: HashSet<usize>,
-    wants_window_resize: HashSet<usize>,
-}
-
-impl EventRouter {
-    pub fn new(bus: EventQueue) -> Self {
-        Self {
-            source: bus,
-            listeners: Vec::new(),
-            wants_key_down: HashSet::new(),
-            wants_key_up: HashSet::new(),
-            wants_mouse_click: HashSet::new(),
-            wants_window_resize: HashSet::new(),
-        }
-    }
-    pub fn add_listener<T: EventListener + 'static>(
-        &mut self,
-        event_types: &[EventType],
-        listener: T,
-    ) -> ListenerHandle {
-        let idx: usize = self.listeners.len();
-
-        self.listeners.push(Box::new(listener));
-
-        for event_type in event_types.iter() {
-            match *event_type {
-                EventType::KeyDown => self.wants_key_down.insert(idx),
-                EventType::KeyUp => self.wants_key_up.insert(idx),
-                EventType::MouseClick => self.wants_mouse_click.insert(idx),
-                EventType::WindowResize => self.wants_window_resize.insert(idx),
-            };
-        }
-        ListenerHandle(idx)
-    }
-    pub fn remove_listener(&mut self, handle: ListenerHandle) {
-        let _idx = handle.0;
-        todo!()
-    }
-    pub fn dispatch(&mut self) {
-        while let Some(event) = self.source.recv() {
-            let wants = match event.event_type() {
-                EventType::KeyDown => &self.wants_key_down,
-                EventType::KeyUp => &self.wants_key_up,
-                EventType::MouseClick => &self.wants_mouse_click,
-                EventType::WindowResize => &self.wants_window_resize,
-            };
-            for idx in wants.iter() {
-                let listener = &mut self.listeners[*idx];
-                listener.on_event(&event);
-            }
-        }
+fn filter_resize_events(e: Event) -> Option<WindowResizeEvent> {
+    match e {
+        Event::WindowResize(wevent) => Some(wevent),
+        _ => None,
     }
 }

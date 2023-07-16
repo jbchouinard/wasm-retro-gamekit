@@ -1,7 +1,5 @@
-use std::{cell::RefCell, rc::Rc};
-
 use crate::{
-    event::{EventListener, WindowResizeEvent},
+    event::{Source, WindowResizeEvent},
     grid::{Grid, Vector},
 };
 
@@ -90,15 +88,17 @@ pub struct Window {
     frame_height: usize,
     scale: usize,
     image_data: ImageData,
+    resize_events: Source<WindowResizeEvent>,
 }
 
 impl Window {
-    pub fn new(frame_width: usize, frame_height: usize) -> Self {
+    pub fn new(frame_width: usize, frame_height: usize, events: Source<WindowResizeEvent>) -> Self {
         Self {
             frame_width,
             frame_height,
             scale: 1,
             image_data: ImageData::new(frame_width, frame_height),
+            resize_events: events,
         }
     }
     pub fn rescale(&mut self, max_width: usize, max_height: usize) {
@@ -110,6 +110,12 @@ impl Window {
         }
         self.image_data = ImageData::new(self.image_width(), self.image_height());
     }
+    pub fn update(&mut self) {
+        while let Some(e) = self.resize_events.recv() {
+            self.rescale(e.width, e.height);
+        }
+    }
+
     pub fn image_width(&self) -> usize {
         self.scale * self.frame_width
     }
@@ -145,21 +151,5 @@ impl Window {
     }
     pub fn image_data_size(&self) -> usize {
         self.image_data.data_size()
-    }
-}
-
-#[derive(Clone)]
-pub struct WindowResizeListener(Rc<RefCell<Window>>);
-
-impl WindowResizeListener {
-    pub fn new(window: Rc<RefCell<Window>>) -> Self {
-        Self(window)
-    }
-}
-
-impl EventListener for WindowResizeListener {
-    fn on_window_resize(&mut self, event: &WindowResizeEvent) {
-        let mut window = self.0.borrow_mut();
-        window.rescale(event.width, event.height);
     }
 }
