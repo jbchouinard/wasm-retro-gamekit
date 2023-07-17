@@ -1,4 +1,4 @@
-use crate::vector::vec2d::Vec2d;
+use crate::{input::keyboard::KeyCode, vector::vec2d::Vec2d};
 
 #[derive(Clone, Copy, Debug)]
 pub enum KeyEventKind {
@@ -9,19 +9,26 @@ pub enum KeyEventKind {
 #[derive(Clone, Debug)]
 pub struct KeyEvent {
     pub kind: KeyEventKind,
-    pub key: String,
-    pub alt: bool,
-    pub ctrl: bool,
-    pub meta: bool,
-    pub shift: bool,
+    pub code: KeyCode,
+    pub ts: f32,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum MouseButton {
     Left = 0,
     Middle = 1,
     Right = 2,
+}
+
+impl From<MouseButton> for u8 {
+    fn from(value: MouseButton) -> Self {
+        match value {
+            MouseButton::Left => 0,
+            MouseButton::Middle => 1,
+            MouseButton::Right => 2,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]

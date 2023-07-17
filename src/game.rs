@@ -103,10 +103,6 @@ impl GameRunner {
         self.game.start(now, &mut self.events);
     }
 
-    fn pump(&mut self) {
-        self.events.pump();
-    }
-
     pub fn events(&mut self) -> &mut Events {
         &mut self.events
     }
@@ -115,11 +111,11 @@ impl GameRunner {
         self.event_sink.clone()
     }
 
-    pub fn tick(&mut self, now: f32, window: &mut Window) -> Response {
+    pub fn rendertick(&mut self, now: f32, window: &mut Window) -> Response {
         if self.finished {
             return Response::Finished;
         }
-        self.pump();
+        self.events.pump();
         match self.game.tick(now) {
             Response::Empty => (),
             Response::RequestRedraw => {

@@ -1,12 +1,10 @@
 mod palette;
+pub mod parametric;
 mod sprite;
 
 use std::collections::HashMap;
 
-use crate::{
-    display::{Color, Frame},
-    grid::Vector,
-};
+use crate::{display::Frame, grid::Vector};
 
 pub use self::palette::*;
 pub use self::sprite::*;
@@ -21,7 +19,7 @@ pub trait Paint {
 pub struct Scene {
     width: usize,
     height: usize,
-    bg_color: Color,
+    bg: Option<Background>,
     sprites: HashMap<Layer, Vec<Sprite>>,
 }
 
@@ -34,13 +32,13 @@ impl Scene {
         Self {
             width,
             height,
-            bg_color: Color::default(),
+            bg: None,
             sprites,
         }
     }
 
-    pub fn set_bg_color(&mut self, color: Color) {
-        self.bg_color = color;
+    pub fn set_background(&mut self, background: Option<Background>) {
+        self.bg = background;
     }
 
     pub fn add_sprite(&mut self, sprite: Sprite) -> bool {
@@ -54,9 +52,16 @@ impl Scene {
     }
 
     fn render_background(&self, frame: &mut Frame) {
-        let pixels = frame.pixels().mut_cells();
-        for p in pixels.iter_mut() {
-            *p = self.bg_color;
+        if let Some(background) = &self.bg {
+            let palette = background.palette.colors();
+            let pixels = frame.pixels();
+            for v in pixels.iter_v() {
+                let pcolor = background.pixels.get_pixel(v);
+                match pcolor {
+                    PColor::T => (),
+                    _ => *pixels.get_mut(v) = palette[*pcolor as usize],
+                }
+            }
         }
     }
 

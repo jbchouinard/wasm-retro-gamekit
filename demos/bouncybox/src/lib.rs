@@ -1,17 +1,22 @@
 mod input;
 pub mod js;
 
-use std::rc::Rc;
+use std::{cmp::Ordering, rc::Rc};
 
-use input::dpad;
+use input::{dpad, keymap};
 use wasm_retro_gamekit::{
     display::Color,
-    event::{Events, MouseButton, MouseEvent, MouseEventKind, Source},
+    event::{Events, MouseButton},
     game::{Game, Response},
     graphics::{
-        Layer, PColor, Paint, Palette, PaletteRef, Scene, Sprite, SpritePixels, SpritePixelsRef,
+        parametric, Background, Layer, PColor, Paint, Palette, PaletteRef, Scene, Sprite,
+        SpritePixels, SpritePixelsRef,
     },
-    input::{Dpad, InputState},
+    input::{
+        keyboard::{attach_keyboard, Keyboard},
+        mouse::{attach_mouse, Mouse, MouseInteractionKind},
+        Dpad,
+    },
     physics::{
         box2d::{Box2DPhysics, HitBox, Mass, Mov, Object, ObjectId},
         identity::{Identity, ObjectKey},
@@ -20,18 +25,20 @@ use wasm_retro_gamekit::{
     vector::vec2d::Vec2d as V,
 };
 
-use self::input::{inputs, Keys};
+use self::input::Keys;
 
 pub struct BouncyBoxWorld {
     scale: usize,
     universe: Universe<Box2DPhysics<f32>, Rectangle>,
     player_key: ObjectKey,
     viewport: Viewport,
-    input: Option<InputState>,
     dpad: Dpad<Keys>,
-    mouse: Option<Source<MouseEvent>>,
+    keyboard: Option<Keyboard<Keys>>,
+    mouse: Option<Mouse>,
     last_t: f32,
     palette: PaletteRef,
+    background: Option<Background>,
+    drag_start: V<i64>,
 }
 
 impl BouncyBoxWorld {
@@ -47,49 +54,99 @@ impl BouncyBoxWorld {
         add_outer_walls(space, width - 50, height - 50, 1_000_000);
 
         let scale = (height + width) / 40;
-        let player = square(scale, V::new(0, 0), 1.0, PColor::C1);
+        let player = bouncybox(scale, scale, V::new(0, 0), 1.0, PColor::C1);
         let player_key = space.add(player);
 
         Self {
             scale,
             last_t: 0.0,
-            input: None,
+            keyboard: None,
             mouse: None,
             dpad: dpad(),
             player_key,
             viewport,
             universe,
             palette,
+            background: Some(background()),
+            drag_start: V::zero(),
         }
     }
 
-    fn recv_mouse(&mut self) {
+    fn process_mouse_interactions(&mut self) {
         let mut clicks: Vec<(V<f32>, MouseButton)> = vec![];
+        let mut drags: Vec<(V<f32>, MouseButton)> = vec![];
+        let mut drops: Vec<(V<f32>, MouseButton)> = vec![];
         if let Some(mouse) = &self.mouse {
-            while let Some(event) = mouse.recv() {
-                if let MouseEventKind::Down(button) = event.kind {
-                    clicks.push((event.pos, button));
+            let interactions = mouse.interactions();
+            while let Some(event) = interactions.recv() {
+                match event.kind {
+                    MouseInteractionKind::Click => {
+                        clicks.push((event.pos, event.button));
+                    }
+                    MouseInteractionKind::Drag => {
+                        drags.push((event.pos, event.button));
+                    }
+                    MouseInteractionKind::Drop => {
+                        drops.push((event.pos, event.button));
+                    }
                 }
             }
         }
         for (pos, button) in clicks {
-            self.on_mouse_down(pos, button);
+            self.on_mouse_click(pos, button);
+        }
+        for (pos, button) in drags {
+            self.on_mouse_drag(pos, button);
+        }
+        for (pos, button) in drops {
+            self.on_mouse_drop(pos, button)
         }
     }
 
-    fn on_mouse_down(&mut self, pos: V<f32>, button: MouseButton) {
-        if let MouseButton::Right = button {
+    fn on_mouse_drag(&mut self, pos: V<f32>, button: MouseButton) {
+        if let MouseButton::Left = button {
+            self.drag_start = self.viewport.relative_pos(pos)
+        }
+    }
+
+    fn on_mouse_drop(&mut self, pos: V<f32>, button: MouseButton) {
+        if let MouseButton::Left = button {
+            let drag_end = self.viewport.relative_pos(pos);
+            let (x_min, x_max) = match self.drag_start.x.cmp(&drag_end.x) {
+                Ordering::Less => (self.drag_start.x, drag_end.x),
+                _ => (drag_end.x, self.drag_start.x),
+            };
+            let (y_min, y_max) = match self.drag_start.y.cmp(&drag_end.y) {
+                Ordering::Less => (self.drag_start.y, drag_end.y),
+                _ => (drag_end.y, self.drag_start.y),
+            };
+
+            let width = x_max - x_min;
+            let height = y_max - y_min;
+            let pos = V::new(x_min, y_min);
+            self.universe.space_mut().add(bouncybox(
+                width as usize,
+                height as usize,
+                pos,
+                1.0,
+                PColor::C3,
+            ));
+        }
+    }
+
+    fn on_mouse_click(&mut self, pos: V<f32>, button: MouseButton) {
+        if let MouseButton::Left = button {
             let size = self.scale;
             let center_pos = self.viewport.relative_pos(pos);
             let tl_pos = center_pos - V::new((size as i64) / 2, (size as i64) / 2);
             self.universe
                 .space_mut()
-                .add(square(size, tl_pos, 1.0, PColor::C2));
+                .add(bouncybox(size, size, tl_pos, 1.0, PColor::C2));
         }
     }
 
     fn update_player_accel(&mut self) {
-        if let Some(input) = &self.input {
+        if let Some(input) = &self.keyboard {
             let space = self.universe.space_mut();
             let player = space.get_mut(self.player_key).unwrap();
             player.hitbox.mov.acc = self.dpad.read(input) * 0.001;
@@ -100,15 +157,15 @@ impl BouncyBoxWorld {
 impl Game for BouncyBoxWorld {
     fn start(&mut self, now: f32, events: &mut Events) {
         self.last_t = now;
-        self.input = Some(inputs(events.key_events()));
-        self.mouse = Some(events.mouse_events());
+        self.keyboard = Some(attach_keyboard(events, keymap()));
+        self.mouse = Some(attach_mouse(events, 200.0, 0.02));
     }
 
     fn tick(&mut self, now: f32) -> Response {
-        if let Some(input) = &mut self.input {
-            input.update();
+        if let Some(kb) = &mut self.keyboard {
+            kb.update();
         }
-        self.recv_mouse();
+        self.process_mouse_interactions();
         self.update_player_accel();
         self.universe.tick(now - self.last_t);
         self.last_t = now;
@@ -120,7 +177,7 @@ impl Game for BouncyBoxWorld {
             .universe
             .space()
             .paint(&self.viewport, self.palette.clone());
-        scene.set_bg_color(Color::rgb(200, 200, 200));
+        scene.set_background(self.background.clone());
         scene
     }
 
@@ -133,8 +190,18 @@ impl Game for BouncyBoxWorld {
     }
 }
 
-pub fn bouncy_box_game(width: usize, height: usize, cor: f32) -> impl Game {
+pub fn bouncy_box_world(width: usize, height: usize, cor: f32) -> impl Game {
     BouncyBoxWorld::new(width, height, cor, default_palette())
+}
+
+fn background() -> Background {
+    let sprite = SpritePixels::parametric(
+        30,
+        30,
+        parametric::Aspect::Stretch,
+        parametric::tile(PColor::C6, PColor::C7),
+    );
+    Background::new(sprite, default_palette())
 }
 
 fn default_palette() -> PaletteRef {
@@ -144,16 +211,16 @@ fn default_palette() -> PaletteRef {
         Color::rgb(20, 100, 100),
         Color::rgb(100, 20, 100),
         Color::rgb(100, 100, 20),
-        Color::rgb(40, 200, 200),
-        Color::rgb(255, 255, 255),
+        Color::rgb(165, 165, 165),
+        Color::rgb(225, 225, 225),
         Color::rgb(0, 0, 0),
     ]))
 }
 
-fn square(side: usize, pos: V<i64>, density: f32, color: PColor) -> Rectangle {
+fn bouncybox(width: usize, height: usize, pos: V<i64>, density: f32, color: PColor) -> Rectangle {
     Rectangle::new(
-        side,
-        side,
+        width,
+        height,
         Mov {
             pos: V::new(pos.x as f32, pos.y as f32),
             vel: V::zero(),
@@ -264,18 +331,13 @@ impl Object<f32> for Rectangle {
 
 fn rectangle_image(width: usize, height: usize, fill: PColor, outline: PColor) -> SpritePixelsRef {
     if fill == outline {
-        Rc::new(SpritePixels::uniform(width, height, fill))
+        SpritePixels::uniform(width, height, fill)
     } else {
-        let mut image: Vec<PColor> = Vec::with_capacity(width * height);
-        for y in 0..height {
-            for x in 0..width {
-                image.push(if x == 0 || x == width - 1 || y == 0 || y == height - 1 {
-                    outline
-                } else {
-                    fill
-                })
-            }
-        }
-        Rc::new(SpritePixels::image(width, height, image))
+        SpritePixels::parametric(
+            width,
+            height,
+            parametric::Aspect::Stretch,
+            parametric::rectangle(fill, outline, 0.05),
+        )
     }
 }

@@ -28,7 +28,7 @@ where
     T: Cell,
 {
     fn make_cell_image(&self, color: PColor) -> SpritePixelsRef {
-        Rc::new(SpritePixels::uniform(2, 2, color))
+        SpritePixels::uniform(2, 2, color)
     }
     fn paint_cell(&self, vc: Vector, state: &Universe<T>, scene: &mut Scene) {
         let grid = state.grid();
@@ -44,7 +44,6 @@ where
 {
     fn paint(&self, state: &Universe<T>) -> Scene {
         let mut scene = Scene::new(self.scene_width(state), self.scene_height(state));
-        scene.set_bg_color(Color::rgb(20, 20, 20));
 
         let grid = state.grid();
         for v in grid.iter_v() {

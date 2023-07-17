@@ -1,4 +1,3 @@
-#![allow(non_snake_case)]
 use std::{cell::RefCell, rc::Rc};
 
 use wasm_bindgen::prelude::*;
@@ -10,6 +9,7 @@ use crate::{
         WindowResizeEvent,
     },
     game::{GameRunner, Response},
+    input::keyboard::{InvalidKeyCode, KeyCode},
     vector::vec2d::Vec2d,
 };
 
@@ -75,25 +75,25 @@ impl EventQueueHandle {
             ts,
         }))
     }
-    pub fn send_key_up(&mut self, key: &str, alt: bool, ctrl: bool, shift: bool, meta: bool) {
-        self.0.send(Event::Key(KeyEvent {
-            kind: KeyEventKind::Up,
-            key: key.to_string(),
-            alt,
-            ctrl,
-            meta,
-            shift,
-        }))
+    pub fn send_key_up(&mut self, code: u8, ts: f32) {
+        let keycode_res: Result<KeyCode, InvalidKeyCode> = code.try_into();
+        if let Ok(keycode) = keycode_res {
+            self.0.send(Event::Key(KeyEvent {
+                kind: KeyEventKind::Up,
+                code: keycode,
+                ts,
+            }))
+        }
     }
-    pub fn send_key_down(&mut self, key: &str, alt: bool, ctrl: bool, shift: bool, meta: bool) {
-        self.0.send(Event::Key(KeyEvent {
-            kind: KeyEventKind::Down,
-            key: key.to_string(),
-            alt,
-            ctrl,
-            meta,
-            shift,
-        }))
+    pub fn send_key_down(&mut self, code: u8, ts: f32) {
+        let keycode_res: Result<KeyCode, InvalidKeyCode> = code.try_into();
+        if let Ok(keycode) = keycode_res {
+            self.0.send(Event::Key(KeyEvent {
+                kind: KeyEventKind::Down,
+                code: keycode,
+                ts,
+            }))
+        }
     }
     pub fn send_window_resize(&mut self, width: u32, height: u32) {
         self.0.send(Event::WindowResize(WindowResizeEvent {
@@ -131,7 +131,7 @@ impl GameHandle {
     }
     pub fn tick(&mut self, now: f32) -> String {
         self.window.borrow_mut().update();
-        match self.game.tick(now, &mut self.window.borrow_mut()) {
+        match self.game.rendertick(now, &mut self.window.borrow_mut()) {
             Response::Empty => "Continue",
             Response::Finished => "Finished",
             Response::RequestRedraw => "RequestRedraw",

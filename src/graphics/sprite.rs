@@ -1,8 +1,11 @@
 use std::rc::Rc;
 
-use crate::grid::{Grid, Vector};
+use crate::{
+    grid::{Grid, Vector},
+    vector::vec2d::Vec2d,
+};
 
-use super::{PColor, PaletteRef};
+use super::{parametric, PColor, PaletteRef};
 
 #[derive(Clone)]
 pub enum SpritePixels {
@@ -11,15 +14,28 @@ pub enum SpritePixels {
 }
 
 impl SpritePixels {
-    pub fn uniform(width: usize, height: usize, color: PColor) -> Self {
-        Self::Uniform((width, height, color))
+    pub fn uniform(width: usize, height: usize, color: PColor) -> SpritePixelsRef {
+        Rc::new(Self::Uniform((width, height, color)))
     }
 
-    pub fn image(width: usize, height: usize, data: Vec<PColor>) -> Self {
+    pub fn image(width: usize, height: usize, data: Vec<PColor>) -> SpritePixelsRef {
         assert_eq!(data.len(), width * height, "image data has wrong size");
         let mut grid: Grid<PColor> = data.into_iter().collect();
         grid.reshape(width, height);
-        Self::Image(grid)
+        Rc::new(Self::Image(grid))
+    }
+
+    pub fn parametric<F>(
+        width: usize,
+        height: usize,
+        aspect: parametric::Aspect,
+        f: F,
+    ) -> SpritePixelsRef
+    where
+        F: Fn(Vec2d<f64>) -> PColor,
+    {
+        let pixels = parametric::draw(width, height, aspect, f);
+        Self::image(width, height, pixels)
     }
 
     pub fn width(&self) -> usize {
@@ -45,6 +61,21 @@ impl SpritePixels {
 }
 
 pub type SpritePixelsRef = Rc<SpritePixels>;
+
+#[derive(Clone)]
+pub struct Background {
+    pub(super) pixels: SpritePixelsRef,
+    pub(super) palette: PaletteRef,
+}
+
+impl Background {
+    pub fn new(image: SpritePixelsRef, palette: PaletteRef) -> Self {
+        Self {
+            pixels: image,
+            palette,
+        }
+    }
+}
 
 pub struct Sprite {
     pub(super) pos: Vector,

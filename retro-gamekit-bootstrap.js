@@ -73,12 +73,12 @@ function addInputListeners(eventQueue, canvas, keyBind) {
     })
     keyBind.addEventListener("keydown", (event) => {
         if (!event.repeat) {
-            eventQueue.send_key_down(event.key, event.altKey, event.ctrlKey, event.shiftKey, event.metaKey);
+            eventQueue.send_key_down(event.keyCode, t);
         }
         event.preventDefault();
     });
     keyBind.addEventListener("keyup", (event) => {
-        eventQueue.send_key_up(event.key, event.altKey, event.ctrlKey, event.shiftKey, event.metaKey);
+        eventQueue.send_key_up(event.keyCode, t);
         event.preventDefault();
     })
 }

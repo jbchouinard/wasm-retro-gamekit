@@ -1,10 +1,9 @@
-use wasm_retro_gamekit::{
-    event::{KeyEvent, Source},
-    input::{keyboard::KeyMap, Dpad, InputState},
+use wasm_retro_gamekit::input::{
+    keyboard::{KeyCode, KeyMap},
+    Dpad,
 };
 
-#[derive(Copy, Clone, Debug)]
-#[repr(u8)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Keys {
     Up,
     Down,
@@ -12,27 +11,19 @@ pub enum Keys {
     Right,
 }
 
-impl From<Keys> for u8 {
-    fn from(val: Keys) -> Self {
-        val as u8
-    }
-}
-
-pub fn keymap() -> KeyMap {
+pub fn keymap() -> KeyMap<Keys> {
     let mut km = KeyMap::new();
-    km.set_key_mapping("ArrowUp", Keys::Up);
-    km.set_key_mapping("ArrowDown", Keys::Down);
-    km.set_key_mapping("ArrowLeft", Keys::Left);
-    km.set_key_mapping("ArrowRight", Keys::Right);
+    km.set(KeyCode::ArrowUp, &Keys::Up);
+    km.set(KeyCode::ArrowDown, &Keys::Down);
+    km.set(KeyCode::ArrowLeft, &Keys::Left);
+    km.set(KeyCode::ArrowRight, &Keys::Right);
+    km.set(KeyCode::W, &Keys::Up);
+    km.set(KeyCode::A, &Keys::Left);
+    km.set(KeyCode::S, &Keys::Down);
+    km.set(KeyCode::D, &Keys::Right);
     km
 }
 
 pub fn dpad() -> Dpad<Keys> {
     Dpad::new([Keys::Up, Keys::Down, Keys::Left, Keys::Right])
-}
-
-pub fn inputs(events: Source<KeyEvent>) -> InputState {
-    let mut input = InputState::new(events);
-    input.set_keymap(keymap());
-    input
 }

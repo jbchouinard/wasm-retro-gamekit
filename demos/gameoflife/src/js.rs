@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use wasm_bindgen::prelude::*;
-pub use wasm_retro_gamekit::js::init_once;
-use wasm_retro_gamekit::{game::GameRunner, js::GameHandle};
+pub use wasm_retro_gamekit::js::wasmbind::init_once;
+use wasm_retro_gamekit::{game::GameRunner, js::wasmbind::GameHandle};
 
 use crate::conway_game_of_life;
 

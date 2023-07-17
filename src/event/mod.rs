@@ -2,6 +2,9 @@ mod events;
 mod plumbing;
 mod queue;
 
+use crate::input::keyboard::KeyMap;
+use crate::input::keyboard::MappedKeyEvent;
+
 pub use self::events::*;
 pub use self::plumbing::*;
 // TODO: use mpsc::channel instead if not feature = "js"
@@ -41,6 +44,16 @@ impl Events {
         self.plumbing
             .filter(e_source, k_sink, FnFilter(filter_key_events));
         k_source
+    }
+
+    pub fn mapped_key_events<T>(&mut self, km: KeyMap<T>) -> Source<MappedKeyEvent<T>>
+    where
+        T: Clone + 'static,
+    {
+        let k_source = self.key_events();
+        let (m_sink, m_source) = self.plumbing.pipe::<MappedKeyEvent<T>>();
+        self.plumbing.filter(k_source, m_sink, km);
+        m_source
     }
 
     pub fn window_resize_events(&mut self) -> Source<WindowResizeEvent> {
