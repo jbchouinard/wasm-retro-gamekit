@@ -2,9 +2,8 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use crate::event::{Events, Filter, KeyEvent, KeyEventKind, Source};
-
 pub use super::keycodes::{InvalidKeyCode, KeyCode};
+use crate::event::{Events, Filter, KeyEvent, KeyEventKind, Source};
 
 pub struct KeyMap<T> {
     map: HashMap<KeyCode, T>,
@@ -86,10 +85,10 @@ where
             match event.kind {
                 KeyEventKind::Down => {
                     self.register_down(event.key, event.ts);
-                }
+                },
                 KeyEventKind::Up => {
                     self.register_up(event.key);
-                }
+                },
             }
         }
     }

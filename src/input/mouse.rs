@@ -1,7 +1,5 @@
-use crate::{
-    event::{Events, Filter, MouseButton, MouseEvent, MouseEventKind, Plumbing, Source},
-    vector::vec2d::Vec2d,
-};
+use crate::event::{Events, Filter, MouseButton, MouseEvent, MouseEventKind, Plumbing, Source};
+use crate::vector::v2::V2;
 
 pub enum MouseInteractionKind {
     Click,
@@ -12,7 +10,7 @@ pub enum MouseInteractionKind {
 pub struct MouseInteraction {
     pub kind: MouseInteractionKind,
     pub button: MouseButton,
-    pub pos: Vec2d<f32>,
+    pub pos: V2<f32>,
     pub ts: f32,
 }
 
@@ -20,7 +18,7 @@ pub struct MouseInteraction {
 struct ButtonState {
     button: MouseButton,
     last_down_ts: f32,
-    last_down_pos: Vec2d<f32>,
+    last_down_pos: V2<f32>,
     is_down: bool,
     is_drag: bool,
     sent_drag: bool,
@@ -31,7 +29,7 @@ impl ButtonState {
         Self {
             button,
             last_down_ts: 0.0,
-            last_down_pos: Vec2d::zero(),
+            last_down_pos: V2::zero(),
             is_down: false,
             is_drag: false,
             sent_drag: false,
@@ -65,13 +63,13 @@ impl ButtonState {
                     pos,
                     ts,
                 })
-            }
+            },
             MouseEventKind::Down(_) => {
                 self.last_down_pos = pos;
                 self.last_down_ts = ts;
                 self.is_down = true;
                 None
-            }
+            },
             MouseEventKind::Move => {
                 if !self.is_down {
                     return None;
@@ -87,7 +85,7 @@ impl ButtonState {
                 } else {
                     None
                 }
-            }
+            },
         }
     }
 }
@@ -122,7 +120,7 @@ impl Filter<MouseEvent, MouseInteraction> for MouseFilter {
             MouseEventKind::Move => {
                 self.last_move_update = (self.last_move_update + 1) % 3;
                 self.last_move_update
-            }
+            },
         };
         let button = &mut self.buttons[update_idx as usize];
         button.update(&me, self.max_click_delay, self.max_click_distance)
@@ -130,12 +128,12 @@ impl Filter<MouseEvent, MouseInteraction> for MouseFilter {
 }
 
 pub struct Mouse {
-    pos: Vec2d<f32>,
+    pos: V2<f32>,
     interactions: Source<MouseInteraction>,
 }
 
 impl Mouse {
-    pub fn relpos(&self) -> &Vec2d<f32> {
+    pub fn relpos(&self) -> &V2<f32> {
         &self.pos
     }
     pub fn interactions(&self) -> &Source<MouseInteraction> {
@@ -153,7 +151,7 @@ pub fn attach_mouse(events: &mut Events, max_click_delay: f32, max_click_distanc
         MouseFilter::new(max_click_delay, max_click_distance),
     );
     Mouse {
-        pos: Vec2d::zero(),
+        pos: V2::zero(),
         interactions: mint_source,
     }
 }

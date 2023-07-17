@@ -1,29 +1,33 @@
 mod input;
 pub mod js;
 
-use std::{cmp::Ordering, rc::Rc};
+use std::cmp::Ordering;
+use std::rc::Rc;
 
 use input::{dpad, keymap};
-use wasm_retro_gamekit::{
-    display::Color,
-    event::{Events, MouseButton},
-    game::{Game, Response},
-    graphics::{
-        parametric, Background, Layer, PColor, Paint, Palette, PaletteRef, Scene, Sprite,
-        SpritePixels, SpritePixelsRef,
-    },
-    input::{
-        keyboard::{attach_keyboard, Keyboard},
-        mouse::{attach_mouse, Mouse, MouseInteractionKind},
-        Dpad,
-    },
-    physics::{
-        box2d::{Box2DPhysics, HitBox, Mass, Mov, Object, ObjectId},
-        identity::{Identity, ObjectKey},
-        universe::{Space, Universe, Viewport},
-    },
-    vector::vec2d::Vec2d as V,
+use wasm_retro_gamekit::display::Color;
+use wasm_retro_gamekit::event::{Events, MouseButton};
+use wasm_retro_gamekit::game::{Game, Response};
+use wasm_retro_gamekit::graphics::{
+    parametric,
+    Background,
+    Layer,
+    PColor,
+    Paint,
+    Palette,
+    PaletteRef,
+    Scene,
+    Sprite,
+    SpritePixels,
+    SpritePixelsRef,
 };
+use wasm_retro_gamekit::input::keyboard::{attach_keyboard, Keyboard};
+use wasm_retro_gamekit::input::mouse::{attach_mouse, Mouse, MouseInteractionKind};
+use wasm_retro_gamekit::input::Dpad;
+use wasm_retro_gamekit::physics::box2d::{Box2DPhysics, HitBox, Mass, Mov, Object, ObjectId};
+use wasm_retro_gamekit::physics::identity::{Identity, ObjectKey};
+use wasm_retro_gamekit::physics::universe::{Space, Universe, Viewport};
+use wasm_retro_gamekit::vector::v2::V2;
 
 use self::input::Keys;
 
@@ -38,13 +42,13 @@ pub struct BouncyBoxWorld {
     last_t: f32,
     palette: PaletteRef,
     background: Option<Background>,
-    drag_start: V<i64>,
+    drag_start: V2<i64>,
 }
 
 impl BouncyBoxWorld {
     pub fn new(width: usize, height: usize, cor: f32, palette: PaletteRef) -> Self {
         let viewport = Viewport::new(
-            V::new(-(width as i64) / 2, -(height as i64) / 2),
+            V2::new(-(width as i64) / 2, -(height as i64) / 2),
             width,
             height,
         );
@@ -54,7 +58,7 @@ impl BouncyBoxWorld {
         add_outer_walls(space, width - 50, height - 50, 1_000_000);
 
         let scale = (height + width) / 40;
-        let player = bouncybox(scale, scale, V::new(0, 0), 1.0, PColor::C1);
+        let player = bouncybox(scale, scale, V2::new(0, 0), 1.0, PColor::C1);
         let player_key = space.add(player);
 
         Self {
@@ -68,27 +72,27 @@ impl BouncyBoxWorld {
             universe,
             palette,
             background: Some(background()),
-            drag_start: V::zero(),
+            drag_start: V2::zero(),
         }
     }
 
     fn process_mouse_interactions(&mut self) {
-        let mut clicks: Vec<(V<f32>, MouseButton)> = vec![];
-        let mut drags: Vec<(V<f32>, MouseButton)> = vec![];
-        let mut drops: Vec<(V<f32>, MouseButton)> = vec![];
+        let mut clicks: Vec<(V2<f32>, MouseButton)> = vec![];
+        let mut drags: Vec<(V2<f32>, MouseButton)> = vec![];
+        let mut drops: Vec<(V2<f32>, MouseButton)> = vec![];
         if let Some(mouse) = &self.mouse {
             let interactions = mouse.interactions();
             while let Some(event) = interactions.recv() {
                 match event.kind {
                     MouseInteractionKind::Click => {
                         clicks.push((event.pos, event.button));
-                    }
+                    },
                     MouseInteractionKind::Drag => {
                         drags.push((event.pos, event.button));
-                    }
+                    },
                     MouseInteractionKind::Drop => {
                         drops.push((event.pos, event.button));
-                    }
+                    },
                 }
             }
         }
@@ -103,13 +107,13 @@ impl BouncyBoxWorld {
         }
     }
 
-    fn on_mouse_drag(&mut self, pos: V<f32>, button: MouseButton) {
+    fn on_mouse_drag(&mut self, pos: V2<f32>, button: MouseButton) {
         if let MouseButton::Left = button {
             self.drag_start = self.viewport.relative_pos(pos)
         }
     }
 
-    fn on_mouse_drop(&mut self, pos: V<f32>, button: MouseButton) {
+    fn on_mouse_drop(&mut self, pos: V2<f32>, button: MouseButton) {
         if let MouseButton::Left = button {
             let drag_end = self.viewport.relative_pos(pos);
             let (x_min, x_max) = match self.drag_start.x.cmp(&drag_end.x) {
@@ -123,7 +127,7 @@ impl BouncyBoxWorld {
 
             let width = x_max - x_min;
             let height = y_max - y_min;
-            let pos = V::new(x_min, y_min);
+            let pos = V2::new(x_min, y_min);
             self.universe.space_mut().add(bouncybox(
                 width as usize,
                 height as usize,
@@ -134,21 +138,21 @@ impl BouncyBoxWorld {
         }
     }
 
-    fn on_mouse_click(&mut self, pos: V<f32>, button: MouseButton) {
+    fn on_mouse_click(&mut self, pos: V2<f32>, button: MouseButton) {
         match button {
             MouseButton::Left => {
                 let size = self.scale;
                 let center_pos = self.viewport.relative_pos(pos);
-                let tl_pos = center_pos - V::new((size as i64) / 2, (size as i64) / 2);
+                let tl_pos = center_pos - V2::new((size as i64) / 2, (size as i64) / 2);
                 self.universe
                     .space_mut()
                     .add(bouncybox(size, size, tl_pos, 1.0, PColor::C2));
-            }
+            },
             MouseButton::Right => {
                 let size = self.scale;
                 let center_pos = self.viewport.relative_pos(pos);
                 self.universe.space_mut().add(wall(center_pos, size, size));
-            }
+            },
             _ => (),
         }
     }
@@ -213,7 +217,7 @@ fn background() -> Background {
 }
 
 fn default_palette() -> PaletteRef {
-    Rc::new(Palette::new([
+    Rc::new(Palette::new(&[
         Color::rgb(200, 40, 40),
         Color::rgb(40, 40, 200),
         Color::rgb(20, 100, 100),
@@ -225,14 +229,14 @@ fn default_palette() -> PaletteRef {
     ]))
 }
 
-fn bouncybox(width: usize, height: usize, pos: V<i64>, density: f32, color: PColor) -> Rectangle {
+fn bouncybox(width: usize, height: usize, pos: V2<i64>, density: f32, color: PColor) -> Rectangle {
     Rectangle::new(
         width,
         height,
         Mov {
-            pos: V::new(pos.x as f32, pos.y as f32),
-            vel: V::zero(),
-            acc: V::zero(),
+            pos: V2::new(pos.x as f32, pos.y as f32),
+            vel: V2::zero(),
+            acc: V2::zero(),
         },
         Mass::Density(density),
         color,
@@ -241,15 +245,15 @@ fn bouncybox(width: usize, height: usize, pos: V<i64>, density: f32, color: PCol
     )
 }
 
-fn wall(center: V<i64>, width: usize, height: usize) -> Rectangle {
-    let tl = V::new(
+fn wall(center: V2<i64>, width: usize, height: usize) -> Rectangle {
+    let tl = V2::new(
         center.x - (width as i64) / 2,
         center.y - (height as i64) / 2,
     );
     let mov: Mov<f32> = Mov {
-        pos: V::new(tl.x as f32, tl.y as f32),
-        vel: V::new(0.0, 0.0),
-        acc: V::new(0.0, 0.0),
+        pos: V2::new(tl.x as f32, tl.y as f32),
+        vel: V2::new(0.0, 0.0),
+        acc: V2::new(0.0, 0.0),
     };
     Rectangle::new(
         width,
@@ -267,10 +271,10 @@ fn add_outer_walls(space: &mut Space<Rectangle>, width: usize, height: usize, t:
     let w = (width as i64) / 2;
     let tdw = (2 * w + 2 * t) as usize;
     let lrh = (2 * h) as usize;
-    space.add(wall(V::new(0, -(h + t / 2)), tdw, t as usize));
-    space.add(wall(V::new(0, h + t / 2), tdw, t as usize));
-    space.add(wall(V::new(-(w + t / 2), 0), t as usize, lrh));
-    space.add(wall(V::new(w + t / 2, 0), t as usize, lrh));
+    space.add(wall(V2::new(0, -(h + t / 2)), tdw, t as usize));
+    space.add(wall(V2::new(0, h + t / 2), tdw, t as usize));
+    space.add(wall(V2::new(-(w + t / 2), 0), t as usize, lrh));
+    space.add(wall(V2::new(w + t / 2, 0), t as usize, lrh));
 }
 
 pub struct Rectangle {

@@ -50,12 +50,11 @@ Current features
 - 2D viewport
 - 2D rectangular hitbox collision physics
 - Keyboard input
-- Mouse click input
+- Mouse click, position, drag & drop
 - Canvas rendering with Context2D
 
 Future features?
 - Input
-    - Mouse position input
     - Game controller input
     - Touch input
 - Audio

@@ -1,12 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{
-    graphics::{Paint, PaletteRef, Scene, Sprite},
-    num::Float,
-    vector::vec2d::Vec2d,
-};
-
 use super::identity::{Identity, IdentityKey, ObjectKey};
+use crate::graphics::{Paint, PaletteRef, Scene, Sprite};
+use crate::num::Float;
+use crate::vector::v2::V2;
 
 pub trait Physics<T> {
     fn tick(&mut self, space: &mut Space<T>, delta_t: f32);
@@ -100,17 +97,17 @@ where
 }
 
 pub struct Viewport {
-    pub pos: Vec2d<i64>,
+    pub pos: V2<i64>,
     pub width: usize,
     pub height: usize,
 }
 
 impl Viewport {
-    pub fn new(pos: Vec2d<i64>, width: usize, height: usize) -> Self {
+    pub fn new(pos: V2<i64>, width: usize, height: usize) -> Self {
         Self { pos, width, height }
     }
 
-    pub fn relative_pos<T>(&self, pos: Vec2d<T>) -> Vec2d<i64>
+    pub fn relative_pos<T>(&self, pos: V2<T>) -> V2<i64>
     where
         T: Float,
     {
@@ -122,7 +119,7 @@ impl Viewport {
             .round()
             .to_i64()
             .unwrap();
-        self.pos + Vec2d::new(relx, rely)
+        self.pos + V2::new(relx, rely)
     }
 
     fn overlaps(&self, sprite: &Sprite) -> bool {
@@ -164,14 +161,14 @@ mod test {
 
     #[test]
     fn test_viewport_relative_pos() {
-        let viewport = Viewport::new(Vec2d::new(-500, -500), 1000, 1000);
-        let rp = viewport.relative_pos(Vec2d::new(0.0, 0.0));
-        assert_eq!(rp, Vec2d::new(-500, -500));
+        let viewport = Viewport::new(V2::new(-500, -500), 1000, 1000);
+        let rp = viewport.relative_pos(V2::new(0.0, 0.0));
+        assert_eq!(rp, V2::new(-500, -500));
 
-        let rp = viewport.relative_pos(Vec2d::new(1.0, 1.0));
-        assert_eq!(rp, Vec2d::new(500, 500));
+        let rp = viewport.relative_pos(V2::new(1.0, 1.0));
+        assert_eq!(rp, V2::new(500, 500));
 
-        let rp = viewport.relative_pos(Vec2d::new(0.0, 0.5));
-        assert_eq!(rp, Vec2d::new(-500, 0));
+        let rp = viewport.relative_pos(V2::new(0.0, 0.5));
+        assert_eq!(rp, V2::new(-500, 0));
     }
 }

@@ -1,8 +1,6 @@
-use crate::{
-    display::Window,
-    event::{Event, Events, Pump, Sink},
-    graphics::Scene,
-};
+use crate::display::Window;
+use crate::event::{Event, Events, Pump, Sink};
+use crate::graphics::Scene;
 
 pub trait Game {
     fn start(&mut self, now: f32, events: &mut Events);
@@ -120,10 +118,10 @@ impl GameRunner {
             Response::Empty => (),
             Response::RequestRedraw => {
                 self.need_render = true;
-            }
+            },
             Response::Finished => {
                 self.finished = true;
-            }
+            },
         }
         if self.need_render {
             if let Some(min_render_t) = self.min_render_t {

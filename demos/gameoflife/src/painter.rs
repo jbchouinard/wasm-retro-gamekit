@@ -1,13 +1,22 @@
-use std::{marker::PhantomData, rc::Rc};
+use std::marker::PhantomData;
+use std::rc::Rc;
 
-use wasm_retro_gamekit::{
-    display::Color,
-    game::Painter,
-    graphics::{Layer, PColor, Palette, PaletteRef, Scene, Sprite, SpritePixels, SpritePixelsRef},
-    grid::Vector,
+use wasm_retro_gamekit::display::Color;
+use wasm_retro_gamekit::game::Painter;
+use wasm_retro_gamekit::graphics::{
+    Layer,
+    PColor,
+    Palette,
+    PaletteRef,
+    Scene,
+    Sprite,
+    SpritePixels,
+    SpritePixelsRef,
 };
+use wasm_retro_gamekit::vector::v2::V2;
 
-use super::{cell::Cell, universe::Universe};
+use super::cell::Cell;
+use super::universe::Universe;
 
 pub struct CellAutomataPainter<T> {
     t: PhantomData<T>,
@@ -18,7 +27,7 @@ impl<T> CellAutomataPainter<T> {
     pub fn new() -> Self {
         Self {
             t: PhantomData,
-            palette: Rc::new(Palette::new([Color::rgb(60, 120, 60); 8])),
+            palette: Rc::new(Palette::new(&[Color::rgb(60, 120, 60); 15])),
         }
     }
 }
@@ -30,7 +39,7 @@ where
     fn make_cell_image(&self, color: PColor) -> SpritePixelsRef {
         SpritePixels::uniform(2, 2, color)
     }
-    fn paint_cell(&self, vc: Vector, state: &Universe<T>, scene: &mut Scene) {
+    fn paint_cell(&self, vc: V2<i64>, state: &Universe<T>, scene: &mut Scene) {
         let grid = state.grid();
         let cell = grid.get(vc);
         let image = self.make_cell_image(cell.color());

@@ -1,11 +1,8 @@
 use std::rc::Rc;
 
-use crate::{
-    grid::{Grid, Vector},
-    vector::vec2d::Vec2d,
-};
-
 use super::{parametric, PColor, PaletteRef};
+use crate::grid::Grid;
+use crate::vector::v2::V2;
 
 #[derive(Clone)]
 pub enum SpritePixels {
@@ -32,7 +29,7 @@ impl SpritePixels {
         f: F,
     ) -> SpritePixelsRef
     where
-        F: Fn(Vec2d<f64>) -> PColor,
+        F: Fn(V2<f64>) -> PColor,
     {
         let pixels = parametric::draw(width, height, aspect, f);
         Self::image(width, height, pixels)
@@ -52,7 +49,7 @@ impl SpritePixels {
         }
     }
 
-    pub fn get_pixel(&self, v: Vector) -> &PColor {
+    pub fn get_pixel(&self, v: V2<i64>) -> &PColor {
         match self {
             Self::Uniform((_, _, c)) => c,
             Self::Image(grid) => grid.get(v),
@@ -62,30 +59,15 @@ impl SpritePixels {
 
 pub type SpritePixelsRef = Rc<SpritePixels>;
 
-#[derive(Clone)]
-pub struct Background {
-    pub(super) pixels: SpritePixelsRef,
-    pub(super) palette: PaletteRef,
-}
-
-impl Background {
-    pub fn new(image: SpritePixelsRef, palette: PaletteRef) -> Self {
-        Self {
-            pixels: image,
-            palette,
-        }
-    }
-}
-
 pub struct Sprite {
-    pub(super) pos: Vector,
+    pub(super) pos: V2<i64>,
     pub(super) layer: Layer,
     pub(super) pixels: SpritePixelsRef,
     pub(super) palette: PaletteRef,
 }
 
 impl Sprite {
-    pub fn new(pos: Vector, layer: Layer, image: SpritePixelsRef, palette: PaletteRef) -> Self {
+    pub fn new(pos: V2<i64>, layer: Layer, image: SpritePixelsRef, palette: PaletteRef) -> Self {
         Self {
             pos,
             layer,
@@ -94,11 +76,11 @@ impl Sprite {
         }
     }
 
-    pub fn shift_pos(&mut self, v: Vector) {
+    pub fn shift_pos(&mut self, v: V2<i64>) {
         self.pos = self.pos + v;
     }
 
-    pub fn pos(&self) -> Vector {
+    pub fn pos(&self) -> V2<i64> {
         self.pos
     }
 

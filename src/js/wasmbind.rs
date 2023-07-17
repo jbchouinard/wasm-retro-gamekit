@@ -1,17 +1,23 @@
-use std::{cell::RefCell, rc::Rc};
+#![allow(non_snake_case)]
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use wasm_bindgen::prelude::*;
 
-use crate::{
-    display::Window,
-    event::{
-        Event, KeyEvent, KeyEventKind, MouseButton, MouseEvent, MouseEventKind, Sink,
-        WindowResizeEvent,
-    },
-    game::{GameRunner, Response},
-    input::keyboard::{InvalidKeyCode, KeyCode},
-    vector::vec2d::Vec2d,
+use crate::display::Window;
+use crate::event::{
+    Event,
+    KeyEvent,
+    KeyEventKind,
+    MouseButton,
+    MouseEvent,
+    MouseEventKind,
+    Sink,
+    WindowResizeEvent,
 };
+use crate::game::{GameRunner, Response};
+use crate::input::keyboard::{InvalidKeyCode, KeyCode};
+use crate::vector::v2::V2;
 
 #[wasm_bindgen]
 pub fn init_once() {
@@ -56,7 +62,7 @@ impl EventQueueHandle {
             2 => MouseButton::Right,
             _ => {
                 return;
-            }
+            },
         };
         let kind = match up {
             true => MouseEventKind::Up(button),
@@ -64,14 +70,14 @@ impl EventQueueHandle {
         };
         self.0.send(Event::Mouse(MouseEvent {
             kind,
-            pos: Vec2d::new(x, y),
+            pos: V2::new(x, y),
             ts,
         }))
     }
     pub fn send_mouse_move(&mut self, ts: f32, x: f32, y: f32) {
         self.0.send(Event::Mouse(MouseEvent {
             kind: MouseEventKind::Move,
-            pos: Vec2d::new(x, y),
+            pos: V2::new(x, y),
             ts,
         }))
     }

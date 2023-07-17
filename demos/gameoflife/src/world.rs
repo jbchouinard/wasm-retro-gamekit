@@ -1,11 +1,10 @@
 use std::marker::PhantomData;
 
-use wasm_retro_gamekit::{
-    event::Events,
-    game::{MutStateWorld, Response},
-};
+use wasm_retro_gamekit::event::Events;
+use wasm_retro_gamekit::game::{MutStateWorld, Response};
 
-use super::{cell::Cell, universe::Universe};
+use super::cell::Cell;
+use super::universe::Universe;
 
 pub struct CellAutomataWorld<T> {
     width: usize,

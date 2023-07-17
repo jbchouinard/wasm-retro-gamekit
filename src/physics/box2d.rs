@@ -1,16 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::{
-    num::Float,
-    pair::Pair,
-    vector::vec2d::{Axis, Vec2d as V},
-};
-
 pub use super::identity::ObjectId;
-use super::{
-    identity::{Identity, IdentityKey, ObjectKey},
-    universe::{Physics, Space, Universe},
-};
+use super::identity::{Identity, IdentityKey, ObjectKey};
+use super::universe::{Physics, Space, Universe};
+use crate::num::Float;
+use crate::pair::Pair;
+use crate::vector::v2::{Axis, V2 as V};
 
 pub struct Mov<T> {
     pub pos: V<T>,
@@ -68,7 +63,7 @@ where
             Mass::Density(m) => {
                 let area: T = T::from_usize(self.width * self.height).unwrap();
                 Some(area * m)
-            }
+            },
         }
     }
 }
@@ -139,7 +134,7 @@ where
         (None, Some(_)) => {
             let (v_b, v_a) = collide_m_to_inf(u_b, u_a, cor);
             (v_a, v_b)
-        }
+        },
     };
     *a.hitbox_mut().mov.vel.ax_mut(axis) = v_a;
     *b.hitbox_mut().mov.vel.ax_mut(axis) = v_b;
@@ -195,14 +190,14 @@ where
                 let a_unclip = *a_unclip * T::from_f32(0.5).unwrap();
                 let b_unclip = a_unclip * -T::one();
                 (a_unclip, b_unclip)
-            }
+            },
             (Some(_), None) => (*a_unclip, V::zero()),
             (None, Some(_)) => (V::zero(), *a_unclip * -T::one()),
             (Some(ma), Some(mb)) => {
                 let ma_unclip = *a_unclip * (mb / (ma + mb));
                 let mb_unclip = *a_unclip * (ma / (ma + mb)) * -T::one();
                 (ma_unclip, mb_unclip)
-            }
+            },
         };
         let a_new_pos = a.hitbox().mov.pos + a_unclip;
         let b_new_pos = b.hitbox().mov.pos + b_unclip;
@@ -257,7 +252,7 @@ where
                         axis = self.unclip(&mut *obj1, &mut *obj2);
                     }
                     vec![axis]
-                }
+                },
             };
             unsafe {
                 let obj1: *mut O = objects[*left_idx] as *mut O;

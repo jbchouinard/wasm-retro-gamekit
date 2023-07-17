@@ -1,7 +1,6 @@
-use crate::{
-    event::{Source, WindowResizeEvent},
-    grid::{Grid, Vector},
-};
+use crate::event::{Source, WindowResizeEvent};
+use crate::grid::Grid;
+use crate::vector::v2::V2;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub struct Color {
@@ -41,7 +40,7 @@ impl Frame {
     pub fn height(&self) -> usize {
         self.height
     }
-    pub fn set_pixel(&mut self, v: Vector, color: Color) -> bool {
+    pub fn set_pixel(&mut self, v: V2<i64>, color: Color) -> bool {
         if v.x < 0 || v.x >= self.width as i64 || v.y < 0 || v.y >= self.height as i64 {
             false
         } else {
@@ -70,7 +69,7 @@ impl ImageData {
     pub fn data_size(&self) -> usize {
         4 * self.height * self.width
     }
-    pub fn set(&mut self, v: &Vector, c: Color) {
+    pub fn set(&mut self, v: &V2<i64>, c: Color) {
         let vs = *v * 4;
         let idx = self.width * vs.y as usize + vs.x as usize;
         self.data[idx] = c.red;
@@ -140,7 +139,7 @@ impl Window {
             let scaled_base_v = v * self.scale as i64;
             for x in 0..self.scale {
                 for y in 0..self.scale {
-                    let scaled_v = scaled_base_v + Vector::new(x as i64, y as i64);
+                    let scaled_v = scaled_base_v + V2::new(x as i64, y as i64);
                     self.image_data.set(&scaled_v, *color);
                 }
             }

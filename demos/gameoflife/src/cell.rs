@@ -1,5 +1,4 @@
 use rand::Rng;
-
 use wasm_retro_gamekit::graphics::PColor;
 
 pub trait Cell: Default + Clone + Sized {

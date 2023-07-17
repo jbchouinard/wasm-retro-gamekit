@@ -1,4 +1,5 @@
-use crate::{input::keyboard::KeyCode, vector::vec2d::Vec2d};
+use crate::input::keyboard::KeyCode;
+use crate::vector::v2::V2;
 
 #[derive(Clone, Copy, Debug)]
 pub enum KeyEventKind {
@@ -41,7 +42,7 @@ pub enum MouseEventKind {
 #[derive(Clone, Debug)]
 pub struct MouseEvent {
     pub kind: MouseEventKind,
-    pub pos: Vec2d<f32>,
+    pub pos: V2<f32>,
     pub ts: f32,
 }
 

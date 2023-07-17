@@ -1,7 +1,8 @@
 #![allow(non_snake_case)]
 use wasm_bindgen::prelude::*;
+use wasm_retro_gamekit::game::GameRunner;
 pub use wasm_retro_gamekit::js::wasmbind::init_once;
-use wasm_retro_gamekit::{game::GameRunner, js::wasmbind::GameHandle};
+use wasm_retro_gamekit::js::wasmbind::GameHandle;
 
 use crate::bouncy_box_world;
 

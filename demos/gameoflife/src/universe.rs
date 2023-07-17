@@ -1,5 +1,7 @@
+use wasm_retro_gamekit::grid::Grid;
+use wasm_retro_gamekit::vector::v2::V2;
+
 use super::cell::Cell;
-use wasm_retro_gamekit::grid::{Grid, Vector};
 
 #[derive(Default)]
 pub struct Universe<T: Cell> {
@@ -22,10 +24,10 @@ impl<T> Universe<T>
 where
     T: Cell,
 {
-    fn get(&self, v: Vector) -> &T {
+    fn get(&self, v: V2<i64>) -> &T {
         self.grid.get(v)
     }
-    fn get_mut(&mut self, v: Vector) -> &mut T {
+    fn get_mut(&mut self, v: V2<i64>) -> &mut T {
         self.grid.get_mut(v)
     }
     pub fn randomize(&mut self, density: f32) {
@@ -40,10 +42,10 @@ where
     pub fn tick(&mut self) {
         for v in self.grid.iter_v() {
             let neighbors = [
-                self.get(v + Vector::new(-1, 0)).clone(),
-                self.get(v + Vector::new(1, 0)).clone(),
-                self.get(v + Vector::new(0, -1)).clone(),
-                self.get(v + Vector::new(0, 1)).clone(),
+                self.get(v + V2::new(-1, 0)).clone(),
+                self.get(v + V2::new(1, 0)).clone(),
+                self.get(v + V2::new(0, -1)).clone(),
+                self.get(v + V2::new(0, 1)).clone(),
             ];
             let cell = self.get_mut(v);
             cell.tick(&neighbors);

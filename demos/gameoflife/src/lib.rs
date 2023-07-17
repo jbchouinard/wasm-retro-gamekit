@@ -1,6 +1,8 @@
 use wasm_retro_gamekit::game::{Game, MutStateGame};
 
-use self::{cell::ConwayCell, painter::CellAutomataPainter, world::CellAutomataWorld};
+use self::cell::ConwayCell;
+use self::painter::CellAutomataPainter;
+use self::world::CellAutomataWorld;
 
 mod cell;
 pub mod js;

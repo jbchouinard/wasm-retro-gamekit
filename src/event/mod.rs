@@ -2,13 +2,11 @@ mod events;
 mod plumbing;
 mod queue;
 
-use crate::input::keyboard::KeyMap;
-use crate::input::keyboard::MappedKeyEvent;
-
 pub use self::events::*;
 pub use self::plumbing::*;
 // TODO: use mpsc::channel instead if not feature = "js"
 pub use self::queue::*;
+use crate::input::keyboard::{KeyMap, MappedKeyEvent};
 
 pub struct Events {
     mains: Joint<Event>,

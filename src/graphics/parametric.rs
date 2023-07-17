@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use crate::vector::vec2d::Vec2d;
+use crate::vector::v2::V2;
 
 pub enum Aspect {
     Fill,
@@ -38,34 +38,34 @@ impl LinearTransform {
         }
     }
 
-    pub fn transform(&self, v: Vec2d<i64>) -> Vec2d<f64> {
+    pub fn transform(&self, v: V2<i64>) -> V2<f64> {
         let x = (self.base_x + v.x as f64) * self.scale_x;
         let y = (self.base_y + v.y as f64) * self.scale_y;
-        Vec2d::new(x, y)
+        V2::new(x, y)
     }
-    pub fn untransform(&self, v: Vec2d<f64>) -> Vec2d<i64> {
+    pub fn untransform(&self, v: V2<f64>) -> V2<i64> {
         let x = ((v.x / self.scale_x) - self.base_x).round() as i64;
         let y = ((v.y / self.scale_y) - self.base_y).round() as i64;
-        Vec2d::new(x, y)
+        V2::new(x, y)
     }
 }
 
 pub fn draw<F, T>(width: usize, height: usize, aspect: Aspect, f: F) -> Vec<T>
 where
-    F: Fn(Vec2d<f64>) -> T,
+    F: Fn(V2<f64>) -> T,
 {
     let transform = LinearTransform::unit_rect(width, height, aspect);
     let mut image: Vec<T> = vec![];
     for y in 0..height {
         for x in 0..width {
-            let v = transform.transform(Vec2d::new(x as i64, y as i64));
+            let v = transform.transform(V2::new(x as i64, y as i64));
             image.push(f(v));
         }
     }
     image
 }
 
-pub fn rectangle<T>(fill: T, outline: T, outline_thickness: f64) -> impl Fn(Vec2d<f64>) -> T
+pub fn rectangle<T>(fill: T, outline: T, outline_thickness: f64) -> impl Fn(V2<f64>) -> T
 where
     T: Copy,
 {
@@ -78,7 +78,7 @@ where
     }
 }
 
-pub fn tile<T>(white: T, black: T) -> impl Fn(Vec2d<f64>) -> T
+pub fn tile<T>(white: T, black: T) -> impl Fn(V2<f64>) -> T
 where
     T: Copy,
 {
@@ -93,7 +93,7 @@ pub fn circle<T>(
     outline: T,
     transparent: T,
     outline_thickness: f64,
-) -> impl Fn(Vec2d<f64>) -> T
+) -> impl Fn(V2<f64>) -> T
 where
     T: Copy,
 {

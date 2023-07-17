@@ -16,12 +16,12 @@ pub enum Direction {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Vec2d<T> {
+pub struct V2<T> {
     pub x: T,
     pub y: T,
 }
 
-impl<T> Vec2d<T> {
+impl<T> V2<T> {
     pub fn new(x: T, y: T) -> Self {
         Self { x, y }
     }
@@ -39,7 +39,7 @@ impl<T> Vec2d<T> {
     }
 }
 
-impl<T> Vec2d<T>
+impl<T> V2<T>
 where
     T: Float,
 {
@@ -56,15 +56,15 @@ where
         }
     }
 
-    pub fn round(&self) -> Vec2d<i64> {
-        Vec2d {
+    pub fn round(&self) -> V2<i64> {
+        V2 {
             x: self.x.round().to_i64().unwrap(),
             y: self.y.round().to_i64().unwrap(),
         }
     }
 }
 
-impl<T> Vec2d<T>
+impl<T> V2<T>
 where
     T: Zero,
 {
@@ -76,7 +76,7 @@ where
     }
 }
 
-impl<T> Vec2d<T>
+impl<T> V2<T>
 where
     T: One + Zero + Neg<Output = T>,
 {
@@ -90,56 +90,56 @@ where
     }
 }
 
-impl<T> Add for Vec2d<T>
+impl<T> Add for V2<T>
 where
     T: Add<T, Output = T>,
 {
-    type Output = Vec2d<T>;
+    type Output = V2<T>;
 
-    fn add(self, rhs: Vec2d<T>) -> Self::Output {
-        Vec2d {
+    fn add(self, rhs: V2<T>) -> Self::Output {
+        V2 {
             x: self.x + rhs.x,
             y: self.y + rhs.y,
         }
     }
 }
 
-impl<T> Sub for Vec2d<T>
+impl<T> Sub for V2<T>
 where
     T: Sub<T, Output = T>,
 {
     type Output = Self;
 
-    fn sub(self, rhs: Vec2d<T>) -> Self::Output {
-        Vec2d {
+    fn sub(self, rhs: V2<T>) -> Self::Output {
+        V2 {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
         }
     }
 }
 
-impl<T> Mul<T> for Vec2d<T>
+impl<T> Mul<T> for V2<T>
 where
     T: Mul<T, Output = T> + Copy,
 {
     type Output = Self;
 
     fn mul(self, rhs: T) -> Self::Output {
-        Vec2d {
+        V2 {
             x: self.x * rhs,
             y: self.y * rhs,
         }
     }
 }
 
-impl<T> Div<T> for Vec2d<T>
+impl<T> Div<T> for V2<T>
 where
     T: Div<T, Output = T> + Copy,
 {
     type Output = Self;
 
     fn div(self, rhs: T) -> Self::Output {
-        Vec2d {
+        V2 {
             x: self.x / rhs,
             y: self.y / rhs,
         }
