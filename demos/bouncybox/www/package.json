@@ -1,5 +1,5 @@
 {
-  "name": "wasm-retro-gamekit-demo-bouncybox",
+  "name": "warg-demo-bouncybox",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "description": "A wasm-retro-gamekit demo game: BouncyBox.",
@@ -22,7 +22,7 @@
   "homepage": "https://github.com/jbchouinard/wasm-retro-gamekit#readme",
   "dependencies": {
     "retro-gamekit-bootstrap": "file:../../..",
-    "wasm_retro_gamekit_bouncybox": "file:../pkg"
+    "wasm-retro-gamekit-bouncybox": "file:../pkg"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^11.0.0",

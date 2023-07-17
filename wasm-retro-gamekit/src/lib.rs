@@ -1,4 +1,5 @@
 #![allow(clippy::new_without_default)]
+pub mod compress;
 pub mod display;
 pub mod event;
 pub mod game;

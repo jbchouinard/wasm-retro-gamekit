@@ -5,10 +5,10 @@ use std::cmp::Ordering;
 use std::rc::Rc;
 
 use input::{dpad, keymap};
-use wasm_retro_gamekit::display::Color;
-use wasm_retro_gamekit::event::{Events, MouseButton};
-use wasm_retro_gamekit::game::{Game, Response};
-use wasm_retro_gamekit::graphics::{
+use warg::display::Color;
+use warg::event::{Events, MouseButton};
+use warg::game::{Game, Response};
+use warg::graphics::{
     parametric,
     Background,
     Layer,
@@ -21,13 +21,13 @@ use wasm_retro_gamekit::graphics::{
     SpritePixels,
     SpritePixelsRef,
 };
-use wasm_retro_gamekit::input::keyboard::{attach_keyboard, Keyboard};
-use wasm_retro_gamekit::input::mouse::{attach_mouse, Mouse, MouseInteractionKind};
-use wasm_retro_gamekit::input::Dpad;
-use wasm_retro_gamekit::physics::box2d::{Box2DPhysics, HitBox, Mass, Mov, Object, ObjectId};
-use wasm_retro_gamekit::physics::identity::{Identity, ObjectKey};
-use wasm_retro_gamekit::physics::universe::{Space, Universe, Viewport};
-use wasm_retro_gamekit::vector::v2::V2;
+use warg::input::keyboard::{attach_keyboard, Keyboard};
+use warg::input::mouse::{attach_mouse, Mouse, MouseInteractionKind};
+use warg::input::Dpad;
+use warg::physics::box2d::{Box2DPhysics, HitBox, Mass, Mov, Object, ObjectId};
+use warg::physics::identity::{Identity, ObjectKey};
+use warg::physics::universe::{Space, Universe, Viewport};
+use warg::vector::v2::V2;
 
 use self::input::Keys;
 

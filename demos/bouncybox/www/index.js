@@ -1,5 +1,5 @@
-import { memory } from "wasm_retro_gamekit_bouncybox/wasm_retro_gamekit_bouncybox_bg.wasm"
-import { BouncyBox, init_once } from "wasm_retro_gamekit_bouncybox";
+import { memory } from "wasm-retro-gamekit-bouncybox/wasm_retro_gamekit_bouncybox_bg.wasm"
+import { BouncyBox, init_once } from "wasm-retro-gamekit-bouncybox";
 import { startGameFullscreen } from "retro-gamekit-bootstrap";
 
 init_once();

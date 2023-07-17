@@ -1,5 +1,5 @@
-use wasm_retro_gamekit::input::keyboard::{KeyCode, KeyMap};
-use wasm_retro_gamekit::input::Dpad;
+use warg::input::keyboard::{KeyCode, KeyMap};
+use warg::input::Dpad;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Keys {

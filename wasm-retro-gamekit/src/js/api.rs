@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use wasm_bindgen::prelude::*;
 
-use crate::display::Window;
+use super::runner::JSGameRunner;
 use crate::event::{
     Event,
     KeyEvent,
@@ -15,8 +15,9 @@ use crate::event::{
     Sink,
     WindowResizeEvent,
 };
-use crate::game::{GameRunner, Response};
+use crate::game::Response;
 use crate::input::keyboard::{InvalidKeyCode, KeyCode};
+use crate::js::display::JSCanvasWindow;
 use crate::vector::v2::V2;
 
 #[wasm_bindgen]
@@ -32,7 +33,7 @@ pub fn init_once() {
 }
 
 #[wasm_bindgen]
-pub struct WindowHandle(Rc<RefCell<Window>>);
+pub struct WindowHandle(Rc<RefCell<JSCanvasWindow>>);
 
 #[wasm_bindgen]
 impl WindowHandle {
@@ -111,13 +112,13 @@ impl EventQueueHandle {
 
 #[wasm_bindgen]
 pub struct GameHandle {
-    game: GameRunner,
-    window: Rc<RefCell<Window>>,
+    game: JSGameRunner,
+    window: Rc<RefCell<JSCanvasWindow>>,
 }
 
 impl GameHandle {
-    pub fn new(mut game: GameRunner) -> Self {
-        let window = Rc::new(RefCell::new(Window::new(
+    pub fn new(mut game: JSGameRunner) -> Self {
+        let window = Rc::new(RefCell::new(JSCanvasWindow::new(
             game.scene_width(),
             game.scene_height(),
             game.events().window_resize_events(),

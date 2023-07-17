@@ -13,16 +13,13 @@ crate-type = ["cdylib", "lib"]
 
 [features]
 default = ["console-panic"]
-console-panic = ["wasm-retro-gamekit/console-panic"]
-console-events = ["wasm-retro-gamekit/console-events"]
+console-panic = ["warg/console-panic"]
+console-events = ["warg/console-events"]
 
 [dependencies]
 wasm-bindgen = "0.2.84"
 # wasm-retro-gamekit = { git = "https://github.com/jbchouinard/wasm-retro-gamekit.git" }
-wasm-retro-gamekit = { path = "../..", features = [ "js" ] }
-
-[profile.release]
-opt-level = 3
+warg = { package = "wasm-retro-gamekit", path = "../../wasm-retro-gamekit", features = [ "js" ] }
 
 [package.metadata.wasm-pack.profile.profiling]
 wasm-opt = ['-O4', '-g']

@@ -42,7 +42,7 @@ impl Scene {
     fn render_background(&self, frame: &mut Frame) {
         if let Some(background) = &self.bg {
             let palette = background.palette.colors();
-            let pixels = frame.pixels();
+            let pixels = frame.pixels_mut();
             for v in pixels.iter_v() {
                 let pcolor = background.pixels.get_pixel(v);
                 match pcolor {
@@ -91,7 +91,7 @@ impl Scene {
     }
 
     pub fn render(&self, frame: &mut Frame) {
-        let len = frame.pixels().mut_cells().len();
+        let len = frame.pixels_mut().mut_cells().len();
         assert_eq!(self.width, frame.width());
         assert_eq!(self.height, frame.height());
         self.render_background(frame);
@@ -100,7 +100,7 @@ impl Scene {
                 self.render_sprite(sprite, frame);
             }
         }
-        assert_eq!(len, frame.pixels().mut_cells().len());
+        assert_eq!(len, frame.pixels_mut().mut_cells().len());
     }
 }
 

@@ -1,5 +1,5 @@
 use rand::Rng;
-use wasm_retro_gamekit::graphics::PColor;
+use warg::graphics::PColor;
 
 pub trait Cell: Default + Clone + Sized {
     fn tick(&mut self, neighbors: &[Self]);

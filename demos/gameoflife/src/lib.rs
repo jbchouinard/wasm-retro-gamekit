@@ -1,14 +1,12 @@
-use wasm_retro_gamekit::game::{Game, MutStateGame};
+use warg::game::Game;
 
 use self::cell::ConwayCell;
-use self::painter::CellAutomataPainter;
-use self::world::CellAutomataWorld;
+use self::game::CellAutomataWorld;
 
 mod cell;
+mod game;
 pub mod js;
-mod painter;
 mod universe;
-mod world;
 
 pub fn conway_game_of_life(
     width: usize,
@@ -16,8 +14,7 @@ pub fn conway_game_of_life(
     density: f32,
     generation_interval: f32,
 ) -> impl Game {
-    let world: CellAutomataWorld<ConwayCell> =
+    let game: CellAutomataWorld<ConwayCell> =
         CellAutomataWorld::new(width, height, density, generation_interval);
-    let painter: CellAutomataPainter<ConwayCell> = CellAutomataPainter::new();
-    MutStateGame::new(world, painter)
+    game
 }

@@ -6,3 +6,4 @@ pkg/
 wasm-pack.log
 .envrc
 package-lock.json
+dist/

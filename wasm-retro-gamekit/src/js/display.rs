@@ -1,64 +1,15 @@
+use crate::display::{Color, Frame, Pixels, Window};
 use crate::event::{Source, WindowResizeEvent};
-use crate::grid::Grid;
 use crate::vector::v2::V2;
 
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
-pub struct Color {
-    red: u8,
-    green: u8,
-    blue: u8,
-    alpha: u8,
-}
-
-impl Color {
-    pub fn rgb(red: u8, green: u8, blue: u8) -> Self {
-        Self::rgba(red, green, blue, 255)
-    }
-    pub fn rgba(red: u8, green: u8, blue: u8, alpha: u8) -> Self {
-        Self {
-            red,
-            green,
-            blue,
-            alpha,
-        }
-    }
-}
-
-pub struct Frame {
-    width: usize,
-    height: usize,
-    pixels: Grid<Color>,
-}
-
-impl Frame {
-    pub fn pixels(&mut self) -> &mut Grid<Color> {
-        &mut self.pixels
-    }
-    pub fn width(&self) -> usize {
-        self.width
-    }
-    pub fn height(&self) -> usize {
-        self.height
-    }
-    pub fn set_pixel(&mut self, v: V2<i64>, color: Color) -> bool {
-        if v.x < 0 || v.x >= self.width as i64 || v.y < 0 || v.y >= self.height as i64 {
-            false
-        } else {
-            let px = self.pixels.get_mut(v);
-            *px = color;
-            true
-        }
-    }
-}
-
 #[derive(Clone, Default)]
-struct ImageData {
+struct JSImageData {
     width: usize,
     height: usize,
     data: Vec<u8>,
 }
 
-impl ImageData {
+impl JSImageData {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
             width,
@@ -82,21 +33,21 @@ impl ImageData {
     }
 }
 
-pub struct Window {
+pub struct JSCanvasWindow {
     frame_width: usize,
     frame_height: usize,
     scale: usize,
-    image_data: ImageData,
+    image_data: JSImageData,
     resize_events: Source<WindowResizeEvent>,
 }
 
-impl Window {
+impl JSCanvasWindow {
     pub fn new(frame_width: usize, frame_height: usize, events: Source<WindowResizeEvent>) -> Self {
         Self {
             frame_width,
             frame_height,
             scale: 1,
-            image_data: ImageData::new(frame_width, frame_height),
+            image_data: JSImageData::new(frame_width, frame_height),
             resize_events: events,
         }
     }
@@ -107,7 +58,7 @@ impl Window {
         {
             self.scale += 1;
         }
-        self.image_data = ImageData::new(self.image_width(), self.image_height());
+        self.image_data = JSImageData::new(self.image_width(), self.image_height());
     }
     pub fn update(&mut self) {
         while let Some(e) = self.resize_events.recv() {
@@ -121,21 +72,27 @@ impl Window {
     pub fn image_height(&self) -> usize {
         self.scale * self.frame_height
     }
-    pub fn new_frame(&self) -> Frame {
-        let mut grid = Grid::new(self.frame_width, self.frame_height);
-        grid.nowrap();
-        Frame {
-            width: self.frame_width,
-            height: self.frame_height,
-            pixels: grid,
-        }
+
+    pub fn image_data(&self) -> *const u8 {
+        self.image_data.data()
     }
-    pub fn draw_frame(&mut self, frame: &Frame) {
-        if frame.width != self.frame_width || frame.height != self.frame_height {
+    pub fn image_data_size(&self) -> usize {
+        self.image_data.data_size()
+    }
+}
+
+impl Window for JSCanvasWindow {
+    fn new_frame(&self) -> Frame {
+        let mut pixels = Pixels::new(self.frame_width, self.frame_height);
+        pixels.nowrap();
+        Frame::new(pixels)
+    }
+    fn draw_frame(&mut self, frame: &Frame) {
+        if frame.width() != self.frame_width || frame.height() != self.frame_height {
             panic!("trying to write frame with wrong dimensions");
         }
-        for v in frame.pixels.iter_v() {
-            let color = frame.pixels.get(v);
+        for v in frame.pixels().iter_v() {
+            let color = frame.pixels().get(v);
             let scaled_base_v = v * self.scale as i64;
             for x in 0..self.scale {
                 for y in 0..self.scale {
@@ -144,11 +101,5 @@ impl Window {
                 }
             }
         }
-    }
-    pub fn image_data(&self) -> *const u8 {
-        self.image_data.data()
-    }
-    pub fn image_data_size(&self) -> usize {
-        self.image_data.data_size()
     }
 }

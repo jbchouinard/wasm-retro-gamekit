@@ -1,5 +1,5 @@
-use wasm_retro_gamekit::grid::Grid;
-use wasm_retro_gamekit::vector::v2::V2;
+use warg::grid::Grid;
+use warg::vector::v2::V2;
 
 use super::cell::Cell;
 
