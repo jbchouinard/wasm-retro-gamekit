@@ -128,20 +128,28 @@ impl BouncyBoxWorld {
                 width as usize,
                 height as usize,
                 pos,
-                1.0,
+                0.5,
                 PColor::C3,
             ));
         }
     }
 
     fn on_mouse_click(&mut self, pos: V<f32>, button: MouseButton) {
-        if let MouseButton::Left = button {
-            let size = self.scale;
-            let center_pos = self.viewport.relative_pos(pos);
-            let tl_pos = center_pos - V::new((size as i64) / 2, (size as i64) / 2);
-            self.universe
-                .space_mut()
-                .add(bouncybox(size, size, tl_pos, 1.0, PColor::C2));
+        match button {
+            MouseButton::Left => {
+                let size = self.scale;
+                let center_pos = self.viewport.relative_pos(pos);
+                let tl_pos = center_pos - V::new((size as i64) / 2, (size as i64) / 2);
+                self.universe
+                    .space_mut()
+                    .add(bouncybox(size, size, tl_pos, 1.0, PColor::C2));
+            }
+            MouseButton::Right => {
+                let size = self.scale;
+                let center_pos = self.viewport.relative_pos(pos);
+                self.universe.space_mut().add(wall(center_pos, size, size));
+            }
+            _ => (),
         }
     }
 
@@ -213,7 +221,7 @@ fn default_palette() -> PaletteRef {
         Color::rgb(100, 100, 20),
         Color::rgb(165, 165, 165),
         Color::rgb(225, 225, 225),
-        Color::rgb(0, 0, 0),
+        Color::rgb(64, 64, 64),
     ]))
 }
 
@@ -337,7 +345,7 @@ fn rectangle_image(width: usize, height: usize, fill: PColor, outline: PColor) -
             width,
             height,
             parametric::Aspect::Stretch,
-            parametric::rectangle(fill, outline, 0.05),
+            parametric::rectangle(fill, outline, 0.0),
         )
     }
 }
