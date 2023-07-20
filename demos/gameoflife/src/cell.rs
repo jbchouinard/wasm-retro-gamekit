@@ -1,10 +1,10 @@
 use rand::Rng;
-use warg::graphics::PColor;
+use warg::graphics::color::Rgba32;
 
 pub trait Cell: Default + Clone + Sized {
     fn tick(&mut self, neighbors: &[Self]);
     fn randomize(&mut self, density: f32);
-    fn color(&self) -> PColor;
+    fn color(&self) -> Rgba32;
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -34,10 +34,10 @@ impl Cell for ConwayCell {
         };
     }
 
-    fn color(&self) -> PColor {
+    fn color(&self) -> Rgba32 {
         match self {
-            ConwayCell::Alive => PColor::C1,
-            ConwayCell::Dead => PColor::T,
+            ConwayCell::Alive => Rgba32::rgb(40, 40, 40),
+            ConwayCell::Dead => Rgba32::rgb(200, 200, 200),
         }
     }
 }

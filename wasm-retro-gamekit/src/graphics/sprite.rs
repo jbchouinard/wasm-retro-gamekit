@@ -1,78 +1,97 @@
 use std::rc::Rc;
 
-use super::{parametric, PColor, PaletteRef};
-use crate::grid::Grid;
+use super::{color, parametric, Image};
 use crate::vector::v2::V2;
 
-#[derive(Clone)]
-pub enum SpritePixels {
-    Uniform((usize, usize, PColor)),
-    Image(Grid<PColor>),
+enum SpritePixels {
+    Monochrome(color::Rgba32),
+    Image(Image<color::Rgba32>),
 }
 
-impl SpritePixels {
-    pub fn uniform(width: usize, height: usize, color: PColor) -> SpritePixelsRef {
-        Rc::new(Self::Uniform((width, height, color)))
+pub struct SpriteImage {
+    width: usize,
+    height: usize,
+    data: SpritePixels,
+}
+
+impl SpriteImage {
+    pub fn monochrome(width: usize, height: usize, color: color::Rgba32) -> SpriteImageRef {
+        Rc::new(Self {
+            width,
+            height,
+            data: SpritePixels::Monochrome(color),
+        })
     }
 
-    pub fn image(width: usize, height: usize, data: Vec<PColor>) -> SpritePixelsRef {
-        assert_eq!(data.len(), width * height, "image data has wrong size");
-        let mut grid: Grid<PColor> = data.into_iter().collect();
-        grid.reshape(width, height);
-        Rc::new(Self::Image(grid))
+    pub fn image(img: Image<color::Cm4>, palette: color::ColorMap4) -> SpriteImageRef {
+        let rgba_img = palette.map_image(&img);
+        Rc::new(Self {
+            width: rgba_img.w(),
+            height: rgba_img.h(),
+            data: SpritePixels::Image(rgba_img),
+        })
+    }
+
+    pub fn rgb_image(img: Image<color::Rgba32>) -> SpriteImageRef {
+        Rc::new(Self {
+            width: img.w(),
+            height: img.h(),
+            data: SpritePixels::Image(img),
+        })
     }
 
     pub fn parametric<F>(
         width: usize,
         height: usize,
+        palette: color::ColorMap4,
         aspect: parametric::Aspect,
         f: F,
-    ) -> SpritePixelsRef
+    ) -> SpriteImageRef
     where
-        F: Fn(V2<f64>) -> PColor,
+        F: Fn(V2<f64>) -> color::Cm4,
     {
-        let pixels = parametric::draw(width, height, aspect, f);
-        Self::image(width, height, pixels)
+        let cm4_pixels = parametric::draw(width, height, aspect, f);
+        let cm4_img = Image::new(width, height, cm4_pixels);
+        let rgba_img = palette.map_image(&cm4_img);
+        Rc::new(Self {
+            width,
+            height,
+            data: SpritePixels::Image(rgba_img),
+        })
     }
 
     pub fn width(&self) -> usize {
-        match self {
-            Self::Uniform((w, _, _)) => *w,
-            Self::Image(grid) => grid.width(),
-        }
+        self.width
     }
 
     pub fn height(&self) -> usize {
-        match self {
-            Self::Uniform((_, h, _)) => *h,
-            Self::Image(grid) => grid.height(),
-        }
+        self.height
     }
 
-    pub fn get_pixel(&self, v: V2<i64>) -> &PColor {
-        match self {
-            Self::Uniform((_, _, c)) => c,
-            Self::Image(grid) => grid.get(v),
+    pub fn get_pixel(&self, v: V2<i64>) -> color::Rgba32 {
+        match &self.data {
+            SpritePixels::Monochrome(c) => *c,
+            SpritePixels::Image(image) => {
+                image.pixels()[((v.y * self.width as i64) + v.x) as usize]
+            },
         }
     }
 }
 
-pub type SpritePixelsRef = Rc<SpritePixels>;
+pub type SpriteImageRef = Rc<SpriteImage>;
 
 pub struct Sprite {
     pub(super) pos: V2<i64>,
     pub(super) layer: Layer,
-    pub(super) pixels: SpritePixelsRef,
-    pub(super) palette: PaletteRef,
+    pub(super) pixels: SpriteImageRef,
 }
 
 impl Sprite {
-    pub fn new(pos: V2<i64>, layer: Layer, image: SpritePixelsRef, palette: PaletteRef) -> Self {
+    pub fn new(pos: V2<i64>, layer: Layer, image: SpriteImageRef) -> Self {
         Self {
             pos,
             layer,
             pixels: image,
-            palette,
         }
     }
 
@@ -88,12 +107,8 @@ impl Sprite {
         self.layer
     }
 
-    pub fn image(&self) -> SpritePixelsRef {
+    pub fn image(&self) -> SpriteImageRef {
         self.pixels.clone()
-    }
-
-    pub fn palette(&self) -> PaletteRef {
-        self.palette.clone()
     }
 }
 

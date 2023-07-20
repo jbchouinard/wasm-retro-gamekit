@@ -1,0 +1,23 @@
+[package]
+name = "wrg-edit"
+repository = "https://github.com/jbchouinard/wasm-retro-gamekit"
+readme = "../../README.md"
+version = "0.1.0"
+authors = ["Jerome Boisvert-Chouinard <github@jbchouinard.net>"]
+license-file = "../../LICENSE"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[features]
+default = ["console-panic"]
+console-panic = ["warg/console-panic"]
+console-events = ["warg/console-events"]
+
+[dependencies]
+wasm-bindgen = "0.2.84"
+warg = { package = "wasm-retro-gamekit", path = "../../wasm-retro-gamekit", features = [ "js" ] }
+
+[package.metadata.wasm-pack.profile.profiling]
+wasm-opt = ['-O4', '-g']

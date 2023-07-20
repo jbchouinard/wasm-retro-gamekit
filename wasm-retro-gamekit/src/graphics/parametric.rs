@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 
+use crate::graphics::color::Color;
 use crate::vector::v2::V2;
 
 pub enum Aspect {
@@ -50,12 +51,12 @@ impl LinearTransform {
     }
 }
 
-pub fn draw<F, T>(width: usize, height: usize, aspect: Aspect, f: F) -> Vec<T>
+pub fn draw<F, T: Color>(width: usize, height: usize, aspect: Aspect, f: F) -> Vec<T>
 where
     F: Fn(V2<f64>) -> T,
 {
     let transform = LinearTransform::unit_rect(width, height, aspect);
-    let mut image: Vec<T> = vec![];
+    let mut image: Vec<T> = Vec::new();
     for y in 0..height {
         for x in 0..width {
             let v = transform.transform(V2::new(x as i64, y as i64));

@@ -8,11 +8,22 @@ authors = ["Jerome Boisvert-Chouinard <github@jbchouinard.net>"]
 license = "Apache-2.0"
 edition = "2021"
 
+[[bin]]
+name = "wrg-inspect"
+path = "src/bins/wrginspect.rs"
+required-features = ["bins"]
+
+[[bin]]
+name = "wrg-convert"
+path = "src/bins/wrgconvert.rs"
+required-features = ["bins"]
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [features]
 default = ["js", "console-panic"]
+bins = ["clap", "image", "clio"]
 console-events = ["web-sys", "web-sys/console", "wasm-bindgen"]
 console-panic = ["console_error_panic_hook"]
 js = ["wasm-bindgen"]
@@ -23,6 +34,10 @@ wasm-bindgen = { version = "0.2.84", optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 web-sys = { version = "0.3.64", optional = true }
 bincode = "2.0.0-rc.3"
+num-integer = "0.1.45"
+clap = { version = "4.3.14", optional = true, features = ["derive"] }
+image = { version = "0.24.6", optional = true }
+clio = { version = "0.3.3", optional = true, features = [ "clap-parse" ]}
 
 [dev-dependencies]
 rstest = "0.18.1"

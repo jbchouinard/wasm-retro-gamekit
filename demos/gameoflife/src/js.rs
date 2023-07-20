@@ -8,6 +8,6 @@ use crate::conway_game_of_life;
 #[wasm_bindgen]
 pub fn GameOfLife(width: usize, height: usize, density: f32, interval: f32) -> GameHandle {
     let game = conway_game_of_life(width, height, density, interval);
-    let runner = JSGameRunner::new(game, None);
+    let runner = JSGameRunner::new(game, None, None);
     GameHandle::new(runner)
 }

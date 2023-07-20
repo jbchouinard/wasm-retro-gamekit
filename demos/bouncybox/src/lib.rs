@@ -2,31 +2,19 @@ mod input;
 pub mod js;
 
 use std::cmp::Ordering;
-use std::rc::Rc;
 
 use input::{dpad, keymap};
-use warg::display::Color;
+use warg::display::Renderer;
 use warg::event::{Events, MouseButton};
 use warg::game::{Game, Response};
-use warg::graphics::{
-    parametric,
-    Background,
-    Layer,
-    PColor,
-    Paint,
-    Palette,
-    PaletteRef,
-    Scene,
-    Sprite,
-    SpritePixels,
-    SpritePixelsRef,
-};
+use warg::graphics::color::{Cm4, ColorMap4, Rgba32};
+use warg::graphics::{parametric, Layer, Paint, Sprite, SpriteImage, SpriteImageRef, Viewport};
 use warg::input::keyboard::{attach_keyboard, Keyboard};
 use warg::input::mouse::{attach_mouse, Mouse, MouseInteractionKind};
 use warg::input::Dpad;
 use warg::physics::box2d::{Box2DPhysics, HitBox, Mass, Mov, Object, ObjectId};
 use warg::physics::identity::{Identity, ObjectKey};
-use warg::physics::universe::{Space, Universe, Viewport};
+use warg::physics::universe::{Space, Universe};
 use warg::vector::v2::V2;
 
 use self::input::Keys;
@@ -40,13 +28,12 @@ pub struct BouncyBoxWorld {
     keyboard: Option<Keyboard<Keys>>,
     mouse: Option<Mouse>,
     last_t: f32,
-    palette: PaletteRef,
-    background: Option<Background>,
+    background: Option<SpriteImageRef>,
     drag_start: V2<i64>,
 }
 
 impl BouncyBoxWorld {
-    pub fn new(width: usize, height: usize, cor: f32, palette: PaletteRef) -> Self {
+    pub fn new(width: usize, height: usize, cor: f32) -> Self {
         let viewport = Viewport::new(
             V2::new(-(width as i64) / 2, -(height as i64) / 2),
             width,
@@ -58,7 +45,7 @@ impl BouncyBoxWorld {
         add_outer_walls(space, width - 50, height - 50, 1_000_000);
 
         let scale = (height + width) / 40;
-        let player = bouncybox(scale, scale, V2::new(0, 0), 1.0, PColor::C1);
+        let player = bouncybox(scale, scale, V2::new(0, 0), 1.0, Cm4::C1);
         let player_key = space.add(player);
 
         Self {
@@ -70,7 +57,6 @@ impl BouncyBoxWorld {
             player_key,
             viewport,
             universe,
-            palette,
             background: Some(background()),
             drag_start: V2::zero(),
         }
@@ -133,7 +119,7 @@ impl BouncyBoxWorld {
                 height as usize,
                 pos,
                 0.5,
-                PColor::C3,
+                Cm4::C3,
             ));
         }
     }
@@ -146,7 +132,7 @@ impl BouncyBoxWorld {
                 let tl_pos = center_pos - V2::new((size as i64) / 2, (size as i64) / 2);
                 self.universe
                     .space_mut()
-                    .add(bouncybox(size, size, tl_pos, 1.0, PColor::C2));
+                    .add(bouncybox(size, size, tl_pos, 1.0, Cm4::C2));
             },
             MouseButton::Right => {
                 let size = self.scale;
@@ -184,13 +170,10 @@ impl Game for BouncyBoxWorld {
         Response::RequestRedraw
     }
 
-    fn paint(&self) -> Scene {
-        let mut scene = self
-            .universe
-            .space()
-            .paint(&self.viewport, self.palette.clone());
+    fn renderer(&self) -> Box<dyn Renderer> {
+        let mut scene = self.universe.space().paint(&self.viewport);
         scene.set_background(self.background.clone());
-        scene
+        Box::new(scene)
     }
 
     fn scene_width(&self) -> usize {
@@ -203,33 +186,34 @@ impl Game for BouncyBoxWorld {
 }
 
 pub fn bouncy_box_world(width: usize, height: usize, cor: f32) -> impl Game {
-    BouncyBoxWorld::new(width, height, cor, default_palette())
+    BouncyBoxWorld::new(width, height, cor)
 }
 
-fn background() -> Background {
-    let sprite = SpritePixels::parametric(
+fn background() -> SpriteImageRef {
+    SpriteImage::parametric(
         30,
         30,
+        default_palette(),
         parametric::Aspect::Stretch,
-        parametric::tile(PColor::C6, PColor::C7),
-    );
-    Background::new(sprite, default_palette())
+        parametric::tile(Cm4::C6, Cm4::C7),
+    )
 }
 
-fn default_palette() -> PaletteRef {
-    Rc::new(Palette::new(&[
-        Color::rgb(200, 40, 40),
-        Color::rgb(40, 40, 200),
-        Color::rgb(20, 100, 100),
-        Color::rgb(100, 20, 100),
-        Color::rgb(100, 100, 20),
-        Color::rgb(165, 165, 165),
-        Color::rgb(225, 225, 225),
-        Color::rgb(64, 64, 64),
-    ]))
+fn default_palette() -> ColorMap4 {
+    ColorMap4::new(&[
+        Rgba32::rgba(0, 0, 0, 0),
+        Rgba32::rgb(200, 40, 40),
+        Rgba32::rgb(40, 40, 200),
+        Rgba32::rgb(20, 100, 100),
+        Rgba32::rgb(100, 20, 100),
+        Rgba32::rgb(100, 100, 20),
+        Rgba32::rgb(165, 165, 165),
+        Rgba32::rgb(225, 225, 225),
+        Rgba32::rgb(64, 64, 64),
+    ])
 }
 
-fn bouncybox(width: usize, height: usize, pos: V2<i64>, density: f32, color: PColor) -> Rectangle {
+fn bouncybox(width: usize, height: usize, pos: V2<i64>, density: f32, color: Cm4) -> Rectangle {
     Rectangle::new(
         width,
         height,
@@ -240,7 +224,7 @@ fn bouncybox(width: usize, height: usize, pos: V2<i64>, density: f32, color: PCo
         },
         Mass::Density(density),
         color,
-        PColor::C8,
+        Cm4::C7,
         Layer::L1,
     )
 }
@@ -260,8 +244,8 @@ fn wall(center: V2<i64>, width: usize, height: usize) -> Rectangle {
         height,
         mov,
         Mass::Infinite,
-        PColor::C8,
-        PColor::C8,
+        Cm4::C8,
+        Cm4::C8,
         Layer::L7,
     )
 }
@@ -281,7 +265,7 @@ pub struct Rectangle {
     id: ObjectId,
     hitbox: HitBox<f32>,
     layer: Layer,
-    image: SpritePixelsRef,
+    image: SpriteImageRef,
 }
 
 impl Rectangle {
@@ -290,8 +274,8 @@ impl Rectangle {
         height: usize,
         mov: Mov<f32>,
         mass: Mass<f32>,
-        fill_color: PColor,
-        outline_color: PColor,
+        fill_color: Cm4,
+        outline_color: Cm4,
         layer: Layer,
     ) -> Self {
         Self {
@@ -315,12 +299,11 @@ impl Rectangle {
 }
 
 impl Paint for Rectangle {
-    fn paint(&self, palette: PaletteRef) -> Option<Sprite> {
+    fn paint(&self) -> Option<Sprite> {
         Some(Sprite::new(
             self.hitbox.mov.pos.round(),
             self.layer,
             self.image.clone(),
-            palette,
         ))
     }
 }
@@ -341,13 +324,14 @@ impl Object<f32> for Rectangle {
     }
 }
 
-fn rectangle_image(width: usize, height: usize, fill: PColor, outline: PColor) -> SpritePixelsRef {
+fn rectangle_image(width: usize, height: usize, fill: Cm4, outline: Cm4) -> SpriteImageRef {
     if fill == outline {
-        SpritePixels::uniform(width, height, fill)
+        SpriteImage::monochrome(width, height, default_palette().map_color(fill))
     } else {
-        SpritePixels::parametric(
+        SpriteImage::parametric(
             width,
             height,
+            default_palette(),
             parametric::Aspect::Stretch,
             parametric::rectangle(fill, outline, 0.0),
         )

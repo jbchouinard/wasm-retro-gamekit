@@ -3,7 +3,8 @@ resolver = "2"
 members = [
     "wasm-retro-gamekit",
     "demos/bouncybox",
-    "demos/gameoflife"
+    "demos/gameoflife",
+    "tools/wrgedit"
 ]
 
 [profile.release]

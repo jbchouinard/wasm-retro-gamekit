@@ -7,3 +7,4 @@ wasm-pack.log
 .envrc
 package-lock.json
 dist/
+node_modules

@@ -54,6 +54,7 @@ Current features
 - Canvas rendering with Context2D
 
 Future features?
+- Pass in <div>, have JS create canvas at 100% size
 - Input
     - Game controller input
     - Touch input

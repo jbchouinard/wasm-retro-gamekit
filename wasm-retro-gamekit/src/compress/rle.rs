@@ -1,12 +1,14 @@
 use bincode::{Decode, Encode};
 
+use crate::num::UInt;
+
 #[derive(Encode, Decode)]
-pub struct RleVec<T: 'static> {
+pub struct RleVec<L: UInt + 'static, T: 'static> {
     length: usize,
-    chunks: Vec<(u8, T)>,
+    chunks: Vec<(L, T)>,
 }
 
-impl<T: Eq + Clone> RleVec<T> {
+impl<L: UInt + 'static, T: Eq + Clone> RleVec<L, T> {
     pub fn new() -> Self {
         Self {
             length: 0,
@@ -25,9 +27,13 @@ impl<T: Eq + Clone> RleVec<T> {
     pub fn push(&mut self, val: T) {
         self.length += 1;
         match self.chunks.last_mut().map(|(n, v)| (n, *v == val)) {
-            Some((_, false)) | Some((&mut u8::MAX, _)) | None => self.chunks.push((1, val)),
+            Some((_, false)) | None => self.chunks.push((L::one(), val)),
             Some((tail_n, true)) => {
-                *tail_n += 1;
+                if *tail_n == L::max_value() {
+                    self.chunks.push((L::one(), val));
+                } else {
+                    *tail_n = *tail_n + L::one();
+                }
             },
         }
     }
@@ -35,8 +41,8 @@ impl<T: Eq + Clone> RleVec<T> {
     pub fn pop(&mut self) -> Option<T> {
         let (last, pop) = match self.chunks.last_mut() {
             Some((count, val)) => {
-                *count -= 1;
-                (Some(val.clone()), *count == 0)
+                *count = *count - L::one();
+                (Some(val.clone()), *count == L::zero())
             },
             None => (None, false),
         };
@@ -55,24 +61,25 @@ impl<T: Eq + Clone> RleVec<T> {
         }
         let mut chunk_start_idx: usize = 0;
         for (chunk_len, chunk_val) in self.chunks.iter() {
-            if idx >= chunk_start_idx && idx < (chunk_start_idx + *chunk_len as usize) {
+            let cl = (*chunk_len).to_usize().unwrap();
+            if idx >= chunk_start_idx && idx < (chunk_start_idx + cl) {
                 return Some(chunk_val);
             }
-            chunk_start_idx += *chunk_len as usize;
+            chunk_start_idx += cl;
         }
         panic!("RleVec length is corrupted?")
     }
 
-    pub fn iter(&self) -> RleVecIter<T> {
+    pub fn iter(&self) -> RleVecIter<L, T> {
         RleVecIter {
             rle_v: self,
             idx: 0,
-            subidx: 0,
+            subidx: L::zero(),
         }
     }
 }
 
-impl<T: Eq + Clone> FromIterator<T> for RleVec<T> {
+impl<L: UInt, T: Eq + Clone> FromIterator<T> for RleVec<L, T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         let mut rv = RleVec::new();
         for t in iter {
@@ -82,13 +89,13 @@ impl<T: Eq + Clone> FromIterator<T> for RleVec<T> {
     }
 }
 
-pub struct RleVecIter<'a, T: 'static> {
-    rle_v: &'a RleVec<T>,
+pub struct RleVecIter<'a, L: UInt + 'static, T: 'static> {
+    rle_v: &'a RleVec<L, T>,
     idx: usize,
-    subidx: u8,
+    subidx: L,
 }
 
-impl<'a, T> Iterator for RleVecIter<'a, T> {
+impl<'a, L: UInt, T> Iterator for RleVecIter<'a, L, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -96,10 +103,10 @@ impl<'a, T> Iterator for RleVecIter<'a, T> {
             None
         } else {
             let item = Some(&self.rle_v.chunks[self.idx].1);
-            self.subidx += 1;
+            self.subidx = self.subidx + L::one();
             if self.subidx >= self.rle_v.chunks[self.idx].0 {
                 self.idx += 1;
-                self.subidx = 0;
+                self.subidx = L::zero();
             }
             item
         }
@@ -114,7 +121,7 @@ mod test {
 
     #[rstest]
     fn test_rle_from_iter() {
-        let rle_v: RleVec<String> = ["foo", "foo", "bar", "baz", "baz", "baz"]
+        let rle_v: RleVec<u8, String> = ["foo", "foo", "bar", "baz", "baz", "baz"]
             .into_iter()
             .map(|s| s.to_string())
             .collect();
@@ -131,7 +138,7 @@ mod test {
 
     #[rstest]
     fn test_rle_to_iter() {
-        let rle_v: RleVec<&str> = RleVec {
+        let rle_v: RleVec<u8, &str> = RleVec {
             length: 5,
             chunks: vec![(3, "foo"), (2, "baz")],
         };
@@ -142,7 +149,7 @@ mod test {
 
     #[rstest]
     fn test_rle_pop() {
-        let mut rle_v: RleVec<&str> = RleVec {
+        let mut rle_v: RleVec<u8, &str> = RleVec {
             length: 3,
             chunks: vec![(1, "foo"), (2, "baz")],
         };
@@ -154,7 +161,7 @@ mod test {
 
     #[rstest]
     fn test_rle_get() {
-        let rle_v: RleVec<u8> = RleVec {
+        let rle_v: RleVec<u8, u8> = RleVec {
             length: 3,
             chunks: vec![(1, 12), (2, 17)],
         };

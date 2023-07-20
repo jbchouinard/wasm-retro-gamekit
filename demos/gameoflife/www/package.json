@@ -21,7 +21,7 @@
   "author": "Jerome Boisvert-Chouinard <github@jbchouinard.net>",
   "homepage": "https://github.com/jbchouinard/wasm-retro-gamekit#readme",
   "dependencies": {
-    "retro-gamekit-bootstrap": "file:../../..",
+    "retro-gamekit": "file:../../..",
     "wasm-retro-gamekit-life": "file:../pkg"
   },
   "devDependencies": {

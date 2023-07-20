@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::input::keyboard::KeyCode;
 use crate::vector::v2::V2;
 
@@ -52,11 +54,19 @@ pub struct WindowResizeEvent {
     pub height: usize,
 }
 
+#[derive(Clone, Debug)]
+pub struct FileReadEvent {
+    pub data: Rc<Vec<u8>>,
+    pub name: String,
+    pub filename: String,
+}
+
 #[derive(Copy, Clone, Debug)]
 pub enum EventType {
     Key,
     Mouse,
     WindowResize,
+    FileRead,
 }
 
 #[derive(Clone, Debug)]
@@ -64,6 +74,7 @@ pub enum Event {
     Key(KeyEvent),
     Mouse(MouseEvent),
     WindowResize(WindowResizeEvent),
+    FileRead(FileReadEvent),
 }
 
 impl Event {
@@ -72,6 +83,7 @@ impl Event {
             Self::Key(_) => EventType::Key,
             Self::Mouse(_) => EventType::Mouse,
             Self::WindowResize(_) => EventType::WindowResize,
+            Self::FileRead(_) => EventType::FileRead,
         }
     }
 }

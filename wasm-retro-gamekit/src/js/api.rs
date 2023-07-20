@@ -7,6 +7,7 @@ use wasm_bindgen::prelude::*;
 use super::runner::JSGameRunner;
 use crate::event::{
     Event,
+    FileReadEvent,
     KeyEvent,
     KeyEventKind,
     MouseButton,
@@ -108,6 +109,14 @@ impl EventQueueHandle {
             height: height as usize,
         }))
     }
+    pub fn send_file_read(&mut self, name: &str, filename: &str, data: &[u8]) -> String {
+        self.0.send(Event::FileRead(FileReadEvent {
+            data: Rc::new(data.to_vec()),
+            name: name.to_string(),
+            filename: filename.to_string(),
+        }));
+        format!("received {} {} {}", name, filename, data.len())
+    }
 }
 
 #[wasm_bindgen]
@@ -138,7 +147,10 @@ impl GameHandle {
     }
     pub fn tick(&mut self, now: f32) -> String {
         self.window.borrow_mut().update();
-        match self.game.rendertick(now, &mut self.window.borrow_mut()) {
+        match self
+            .game
+            .tick_and_render(now, &mut self.window.borrow_mut())
+        {
             Response::Empty => "Continue",
             Response::Finished => "Finished",
             Response::RequestRedraw => "RequestRedraw",

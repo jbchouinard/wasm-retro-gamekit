@@ -5,20 +5,24 @@ use self::rle::RleVecIter;
 use crate::compress::rle::RleVec;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "bins", derive(clap::ValueEnum))]
 pub enum Compression {
     None,
-    Rle,
+    Rle8,
+    Rle16,
 }
 
 #[derive(Encode, Decode)]
 pub enum Data<T: 'static + Eq + Clone> {
     Decomp(Vec<T>),
-    Rle(RleVec<T>),
+    Rle8(RleVec<u8, T>),
+    Rle16(RleVec<u16, T>),
 }
 
 enum DataIter<'a, T: 'static + Eq + Clone> {
     Decomp(std::slice::Iter<'a, T>),
-    Rle(RleVecIter<'a, T>),
+    Rle8(RleVecIter<'a, u8, T>),
+    Rle16(RleVecIter<'a, u16, T>),
 }
 
 impl<'a, T: 'static + Eq + Clone> Iterator for DataIter<'a, T> {
@@ -27,7 +31,8 @@ impl<'a, T: 'static + Eq + Clone> Iterator for DataIter<'a, T> {
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             Self::Decomp(it) => it.next(),
-            Self::Rle(it) => it.next(),
+            Self::Rle8(it) => it.next(),
+            Self::Rle16(it) => it.next(),
         }
     }
 }
@@ -41,41 +46,55 @@ impl<T: Eq + Clone> Data<T> {
     pub fn new(compression: Compression) -> Self {
         match compression {
             Compression::None => Self::Decomp(Vec::new()),
-            Compression::Rle => Self::Rle(RleVec::new()),
+            Compression::Rle8 => Self::Rle8(RleVec::new()),
+            Compression::Rle16 => Self::Rle16(RleVec::new()),
         }
     }
 
     pub fn len(&self) -> usize {
         match self {
             Self::Decomp(v) => v.len(),
-            Self::Rle(rv) => rv.len(),
+            Self::Rle8(rv) => rv.len(),
+            Self::Rle16(rv) => rv.len(),
+        }
+    }
+
+    pub fn size(&self) -> usize {
+        match self {
+            Self::Decomp(v) => std::mem::size_of::<T>() * v.len(),
+            Self::Rle8(rv) => (std::mem::size_of::<T>() + std::mem::size_of::<u8>()) * rv.len(),
+            Self::Rle16(rv) => (std::mem::size_of::<T>() + std::mem::size_of::<u16>()) * rv.len(),
         }
     }
 
     pub fn is_empty(&self) -> bool {
         match self {
             Self::Decomp(v) => v.is_empty(),
-            Self::Rle(rv) => rv.is_empty(),
+            Self::Rle8(rv) => rv.is_empty(),
+            Self::Rle16(rv) => rv.is_empty(),
         }
     }
     pub fn from_iter<I: IntoIterator<Item = T>>(iter: I, compression: Compression) -> Self {
         match compression {
             Compression::None => Self::Decomp(iter.into_iter().collect()),
-            Compression::Rle => Self::Rle(iter.into_iter().collect()),
+            Compression::Rle8 => Self::Rle8(iter.into_iter().collect()),
+            Compression::Rle16 => Self::Rle16(iter.into_iter().collect()),
         }
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &T> {
         match self {
             Self::Decomp(v) => DataIter::Decomp(v.iter()),
-            Self::Rle(rv) => DataIter::Rle(rv.iter()),
+            Self::Rle8(rv) => DataIter::Rle8(rv.iter()),
+            Self::Rle16(rv) => DataIter::Rle16(rv.iter()),
         }
     }
 
     pub fn compression(&self) -> Compression {
         match self {
             Self::Decomp(_) => Compression::None,
-            Self::Rle(_) => Compression::Rle,
+            Self::Rle8(_) => Compression::Rle8,
+            Self::Rle16(_) => Compression::Rle16,
         }
     }
 
@@ -105,21 +124,24 @@ impl<T: Eq + Clone> Data<T> {
     pub fn push(&mut self, val: T) {
         match self {
             Self::Decomp(v) => v.push(val),
-            Self::Rle(rv) => rv.push(val),
+            Self::Rle8(rv) => rv.push(val),
+            Self::Rle16(rv) => rv.push(val),
         }
     }
 
     pub fn pop(&mut self) -> Option<T> {
         match self {
             Self::Decomp(v) => v.pop(),
-            Self::Rle(rv) => rv.pop(),
+            Self::Rle8(rv) => rv.pop(),
+            Self::Rle16(rv) => rv.pop(),
         }
     }
 
     pub fn get(&self, idx: usize) -> Option<&T> {
         match self {
             Self::Decomp(v) => v.get(idx),
-            Self::Rle(rv) => rv.get(idx),
+            Self::Rle8(rv) => rv.get(idx),
+            Self::Rle16(rv) => rv.get(idx),
         }
     }
 
@@ -147,7 +169,7 @@ mod test {
         let mut got: Vec<u8> = data.iter().cloned().collect();
         assert_eq!(want, got);
 
-        data.compress(Compression::Rle);
+        data.compress(Compression::Rle16);
         got = data.iter().cloned().collect();
         assert_eq!(want, got);
 

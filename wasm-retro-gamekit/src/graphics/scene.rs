@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use super::{Layer, PColor, PaletteRef, Sprite, SpritePixelsRef, LAYERS};
-use crate::display::Frame;
+use super::{Layer, Sprite, SpriteImageRef, LAYERS};
+use crate::display::{Frame, Renderer};
 use crate::vector::v2::V2;
 
 pub struct Scene {
     width: usize,
     height: usize,
-    bg: Option<Background>,
+    background: Option<SpriteImageRef>,
     sprites: HashMap<Layer, Vec<Sprite>>,
 }
 
@@ -20,13 +20,13 @@ impl Scene {
         Self {
             width,
             height,
-            bg: None,
+            background: None,
             sprites,
         }
     }
 
-    pub fn set_background(&mut self, background: Option<Background>) {
-        self.bg = background;
+    pub fn set_background(&mut self, background: Option<SpriteImageRef>) {
+        self.background = background;
     }
 
     pub fn add_sprite(&mut self, sprite: Sprite) -> bool {
@@ -40,14 +40,20 @@ impl Scene {
     }
 
     fn render_background(&self, frame: &mut Frame) {
-        if let Some(background) = &self.bg {
-            let palette = background.palette.colors();
-            let pixels = frame.pixels_mut();
-            for v in pixels.iter_v() {
-                let pcolor = background.pixels.get_pixel(v);
-                match pcolor {
-                    PColor::T => (),
-                    _ => *pixels.get_mut(v) = palette[*pcolor as usize],
+        if let Some(background) = &self.background {
+            let bgw = background.width();
+            let bgh = background.height();
+            let fw = frame.w();
+            let fh = frame.h();
+            let frame_pixels = frame.pixels_mut();
+            for y in 0..fh {
+                for x in 0..fw {
+                    let fidx = (y * fw) + x;
+                    let bgv = V2::new((x % bgw) as i64, (y % bgh) as i64);
+                    let color = background.get_pixel(bgv);
+                    if color.alpha > 0 {
+                        frame_pixels[fidx] = color
+                    }
                 }
             }
         }
@@ -65,7 +71,6 @@ impl Scene {
 
     fn render_sprite(&self, sprite: &Sprite, frame: &mut Frame) {
         let image = sprite.image();
-        let palette = sprite.palette().colors();
 
         let v_img_tl = sprite.pos();
         let v_img_br = v_img_tl + V2::new(image.width() as i64, image.height() as i64);
@@ -80,41 +85,34 @@ impl Scene {
                 let v_scn_pxl = V2::new(x, y);
                 let v_img_pxl = v_scn_pxl - v_img_tl;
                 let pixel = image.get_pixel(v_img_pxl);
-                match pixel {
-                    PColor::T => (),
-                    _ => {
-                        frame.set_pixel(v_scn_pxl, palette[*pixel as usize]);
-                    },
+                if pixel.alpha > 0 {
+                    *frame.pixel_mut_v(v_scn_pxl) = pixel;
                 }
             }
         }
     }
 
     pub fn render(&self, frame: &mut Frame) {
-        let len = frame.pixels_mut().mut_cells().len();
-        assert_eq!(self.width, frame.width());
-        assert_eq!(self.height, frame.height());
+        assert_eq!(self.width, frame.w());
+        assert_eq!(self.height, frame.h());
         self.render_background(frame);
         for layer in LAYERS.iter() {
             for sprite in self.sprites.get(layer).unwrap() {
                 self.render_sprite(sprite, frame);
             }
         }
-        assert_eq!(len, frame.pixels_mut().mut_cells().len());
     }
 }
 
-#[derive(Clone)]
-pub struct Background {
-    pub(super) pixels: SpritePixelsRef,
-    pub(super) palette: PaletteRef,
-}
-
-impl Background {
-    pub fn new(image: SpritePixelsRef, palette: PaletteRef) -> Self {
-        Self {
-            pixels: image,
-            palette,
+impl Renderer for Scene {
+    fn render(&self, frame: &mut Frame) {
+        assert_eq!(self.width, frame.w());
+        assert_eq!(self.height, frame.h());
+        self.render_background(frame);
+        for layer in LAYERS.iter() {
+            for sprite in self.sprites.get(layer).unwrap() {
+                self.render_sprite(sprite, frame);
+            }
         }
     }
 }

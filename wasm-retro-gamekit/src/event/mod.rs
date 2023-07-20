@@ -62,6 +62,15 @@ impl Events {
             .filter(e_source, w_sink, FnFilter(filter_resize_events));
         w_source
     }
+
+    pub fn file_read_events(&mut self) -> Source<FileReadEvent> {
+        let (e_sink, e_source) = self.plumbing.pipe::<Event>();
+        let (u_sink, u_source) = self.plumbing.pipe::<FileReadEvent>();
+        self.mains.add_sink(e_sink);
+        self.plumbing
+            .filter(e_source, u_sink, FnFilter(filter_file_read_events));
+        u_source
+    }
 }
 
 impl Pump for Events {
@@ -88,6 +97,13 @@ fn filter_key_events(e: Event) -> Option<KeyEvent> {
 fn filter_resize_events(e: Event) -> Option<WindowResizeEvent> {
     match e {
         Event::WindowResize(wevent) => Some(wevent),
+        _ => None,
+    }
+}
+
+fn filter_file_read_events(e: Event) -> Option<FileReadEvent> {
+    match e {
+        Event::FileRead(uevent) => Some(uevent),
         _ => None,
     }
 }

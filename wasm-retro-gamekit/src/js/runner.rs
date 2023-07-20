@@ -1,3 +1,4 @@
+use super::api::GameHandle;
 use super::display::JSCanvasWindow;
 use crate::display::Window;
 use crate::event::{Event, Events, Pump, Sink};
@@ -7,6 +8,8 @@ pub struct JSGameRunner {
     game: Box<dyn Game>,
     last_render_t: f32,
     min_render_t: Option<f32>,
+    last_tick_t: f32,
+    min_tick_t: Option<f32>,
     finished: bool,
     need_render: bool,
     events: Events,
@@ -14,7 +17,7 @@ pub struct JSGameRunner {
 }
 
 impl JSGameRunner {
-    pub fn new<T>(game: T, fps_cap: Option<f32>) -> Self
+    pub fn new<T>(game: T, fps_cap: Option<f32>, tps_cap: Option<f32>) -> Self
     where
         T: Game + 'static,
     {
@@ -22,7 +25,9 @@ impl JSGameRunner {
         Self {
             game: Box::new(game),
             last_render_t: 0.0,
+            last_tick_t: 0.0,
             min_render_t: fps_cap.map(|x| 1000.0 / x),
+            min_tick_t: tps_cap.map(|x| 1000.0 / x),
             finished: false,
             need_render: true,
             events,
@@ -42,10 +47,16 @@ impl JSGameRunner {
         self.event_sink.clone()
     }
 
-    pub fn rendertick(&mut self, now: f32, window: &mut JSCanvasWindow) -> Response {
+    pub fn tick_and_render(&mut self, now: f32, window: &mut JSCanvasWindow) -> Response {
         if self.finished {
             return Response::Finished;
         }
+        if let Some(min_tick_t) = self.min_tick_t {
+            if (now - self.last_tick_t) < min_tick_t {
+                return Response::Empty;
+            }
+        }
+        self.last_tick_t = now;
         self.events.pump();
         match self.game.tick(now) {
             Response::Empty => (),
@@ -70,12 +81,12 @@ impl JSGameRunner {
         }
     }
 
-    fn render(&self, window: &mut JSCanvasWindow) {
-        let mut frame = window.new_frame();
-        assert_eq!(frame.width(), self.game.scene_width());
-        assert_eq!(frame.height(), self.game.scene_height());
-        let scene = self.game.paint();
-        scene.render(&mut frame);
+    fn render(&mut self, window: &mut JSCanvasWindow) {
+        self.game
+            .update_resolution(window.max_width(), window.max_height());
+        let mut frame = window.new_frame(self.game.scene_width(), self.game.scene_height());
+        let renderer = self.game.renderer();
+        renderer.render(&mut frame);
         window.draw_frame(&frame);
     }
 
@@ -85,5 +96,9 @@ impl JSGameRunner {
 
     pub fn scene_width(&self) -> usize {
         self.game.scene_width()
+    }
+
+    pub fn handle(self) -> GameHandle {
+        GameHandle::new(self)
     }
 }
